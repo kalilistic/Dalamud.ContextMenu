@@ -11,7 +11,6 @@ namespace XivCommon {
 
         private GetUiModuleDelegate InternalGetUiModule { get; }
 
-        public Toast Toast { get; }
         public Chat Chat { get; }
         public PartyFinder PartyFinder { get; }
 
@@ -21,7 +20,6 @@ namespace XivCommon {
             var getUiModulePtr = scanner.ScanText("E8 ?? ?? ?? ?? 83 3B 01");
             this.InternalGetUiModule = Marshal.GetDelegateForFunctionPointer<GetUiModuleDelegate>(getUiModulePtr);
 
-            this.Toast = new Toast(this, scanner);
             this.Chat = new Chat(this, scanner);
             this.PartyFinder = new PartyFinder(scanner);
         }
