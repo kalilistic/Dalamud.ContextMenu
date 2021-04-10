@@ -66,18 +66,6 @@ namespace XivCommon.Functions {
             this.Show(sender.Encode(), message.Encode(), options);
         }
 
-        public void Show(string sender, string message, BattleTalkOptions? options = null) {
-            this.Show(Encoding.UTF8.GetBytes(sender), Encoding.UTF8.GetBytes(message), options);
-        }
-
-        public void Show(SeString sender, string message, BattleTalkOptions? options = null) {
-            this.Show(sender.Encode(), Encoding.UTF8.GetBytes(message), options);
-        }
-
-        public void Show(string sender, SeString message, BattleTalkOptions? options = null) {
-            this.Show(Encoding.UTF8.GetBytes(sender), message.Encode(), options);
-        }
-
         private void Show(byte[] sender, byte[] message, BattleTalkOptions? options) {
             if (sender.Length == 0) {
                 throw new ArgumentException("sender cannot be empty", nameof(sender));
