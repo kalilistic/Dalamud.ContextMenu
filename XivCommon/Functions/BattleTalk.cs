@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 using Dalamud.Game;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Hooking;
@@ -8,35 +9,43 @@ namespace XivCommon.Functions {
     public class BattleTalk : IDisposable {
         private GameFunctions Functions { get; }
         private SeStringManager SeStringManager { get; }
-        private bool Enabled { get; }
+        private bool HookEnabled { get; }
 
         public delegate void BattleTalkEventDelegate(ref SeString sender, ref SeString message, ref BattleTalkOptions options, ref bool isHandled);
 
         /// <summary>
+        /// <para>
         /// The event that is fired when a BattleTalk window is shown.
+        /// </para>
+        /// <para>
+        /// Requires the <see cref="Hooks.BattleTalk"/> hook to be enabled.
+        /// </para>
         /// </summary>
         public event BattleTalkEventDelegate? OnBattleTalk;
 
         private delegate byte AddBattleTalkDelegate(IntPtr uiModule, IntPtr sender, IntPtr message, float duration, byte style);
 
-        private Hook<AddBattleTalkDelegate>? AddBattleTextHook { get; }
+        private AddBattleTalkDelegate AddBattleTalk { get; }
+        private Hook<AddBattleTalkDelegate>? AddBattleTalkHook { get; }
 
         internal BattleTalk(GameFunctions functions, SigScanner scanner, SeStringManager seStringManager, bool hook) {
             this.Functions = functions;
             this.SeStringManager = seStringManager;
-            this.Enabled = hook;
+            this.HookEnabled = hook;
 
-            if (!hook) {
+            var addBattleTalkPtr = scanner.ScanText("48 89 5C 24 ?? 57 48 83 EC 50 48 8B 01 49 8B D8 0F 29 74 24 ?? 48 8B FA 0F 28 F3 FF 50 40 C7 44 24 ?? ?? ?? ?? ??");
+            this.AddBattleTalk = Marshal.GetDelegateForFunctionPointer<AddBattleTalkDelegate>(addBattleTalkPtr);
+
+            if (!this.HookEnabled) {
                 return;
             }
 
-            var addBattleTextPtr = scanner.ScanText("48 89 5C 24 ?? 57 48 83 EC 50 48 8B 01 49 8B D8 0F 29 74 24 ?? 48 8B FA 0F 28 F3 FF 50 40 C7 44 24 ?? ?? ?? ?? ??");
-            this.AddBattleTextHook = new Hook<AddBattleTalkDelegate>(addBattleTextPtr, new AddBattleTalkDelegate(this.AddBattleTalkDetour));
-            this.AddBattleTextHook.Enable();
+            this.AddBattleTalkHook = new Hook<AddBattleTalkDelegate>(addBattleTalkPtr, new AddBattleTalkDelegate(this.AddBattleTalkDetour));
+            this.AddBattleTalkHook.Enable();
         }
 
         public void Dispose() {
-            this.AddBattleTextHook?.Dispose();
+            this.AddBattleTalkHook?.Dispose();
         }
 
         private unsafe byte AddBattleTalkDetour(IntPtr uiModule, IntPtr senderPtr, IntPtr messagePtr, float duration, byte style) {
@@ -66,7 +75,7 @@ namespace XivCommon.Functions {
             var finalMessage = message.Encode().Terminate();
 
             fixed (byte* fSenderPtr = finalSender, fMessagePtr = finalMessage) {
-                return this.AddBattleTextHook!.Original(uiModule, (IntPtr) fSenderPtr, (IntPtr) fMessagePtr, options.Duration, (byte) options.Style);
+                return this.AddBattleTalkHook!.Original(uiModule, (IntPtr) fSenderPtr, (IntPtr) fMessagePtr, options.Duration, (byte) options.Style);
             }
         }
 
@@ -76,16 +85,12 @@ namespace XivCommon.Functions {
         /// <param name="sender">The name to attribute to the message</param>
         /// <param name="message">The message to show in the window</param>
         /// <param name="options">Optional options for the window</param>
-        /// <exception cref="InvalidOperationException">If the <see cref="Hooks.BattleTalk"/> hook is not enabled</exception>
+        /// <exception cref="ArgumentException">If sender or message are empty</exception>
         public void Show(SeString sender, SeString message, BattleTalkOptions? options = null) {
             this.Show(sender.Encode(), message.Encode(), options);
         }
 
         private void Show(byte[] sender, byte[] message, BattleTalkOptions? options) {
-            if (!this.Enabled) {
-                throw new InvalidOperationException("BattleTalk hooks are not enabled");
-            }
-
             if (sender.Length == 0) {
                 throw new ArgumentException("sender cannot be empty", nameof(sender));
             }
@@ -100,7 +105,11 @@ namespace XivCommon.Functions {
 
             unsafe {
                 fixed (byte* senderPtr = sender.Terminate(), messagePtr = message.Terminate()) {
-                    this.AddBattleTalkDetour(uiModule, (IntPtr) senderPtr, (IntPtr) messagePtr, options.Duration, (byte) options.Style);
+                    if (this.HookEnabled) {
+                        this.AddBattleTalkDetour(uiModule, (IntPtr) senderPtr, (IntPtr) messagePtr, options.Duration, (byte) options.Style);
+                    } else {
+                        this.AddBattleTalk(uiModule, (IntPtr) senderPtr, (IntPtr) messagePtr, options.Duration, (byte) options.Style);
+                    }
                 }
             }
         }
