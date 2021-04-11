@@ -5,6 +5,9 @@ using System.Text;
 using Dalamud.Game;
 
 namespace XivCommon.Functions {
+    /// <summary>
+    /// A class containing chat functionality
+    /// </summary>
     public class Chat {
         private GameFunctions Functions { get; }
 

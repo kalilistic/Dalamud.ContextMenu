@@ -4,6 +4,9 @@ using Dalamud.Game;
 using Dalamud.Hooking;
 
 namespace XivCommon.Functions {
+    /// <summary>
+    /// A class containing Party Finder functionality
+    /// </summary>
     public class PartyFinder : IDisposable {
         private delegate byte RequestPartyFinderListingsDelegate(IntPtr agent, byte categoryIdx);
 
@@ -28,6 +31,7 @@ namespace XivCommon.Functions {
             this.RequestPfListingsHook.Enable();
         }
 
+        /// <inheritdoc />
         public void Dispose() {
             this.RequestPfListingsHook?.Dispose();
         }

@@ -6,11 +6,17 @@ using Dalamud.Hooking;
 using Dalamud.Plugin;
 
 namespace XivCommon.Functions {
+    /// <summary>
+    /// The class containing BattleTalk functionality
+    /// </summary>
     public class BattleTalk : IDisposable {
         private GameFunctions Functions { get; }
         private SeStringManager SeStringManager { get; }
         private bool HookEnabled { get; }
 
+        /// <summary>
+        /// The delegate for BattleTalk events.
+        /// </summary>
         public delegate void BattleTalkEventDelegate(ref SeString sender, ref SeString message, ref BattleTalkOptions options, ref bool isHandled);
 
         /// <summary>
@@ -44,6 +50,7 @@ namespace XivCommon.Functions {
             this.AddBattleTalkHook.Enable();
         }
 
+        /// <inheritdoc />
         public void Dispose() {
             this.AddBattleTalkHook?.Dispose();
         }
@@ -115,6 +122,9 @@ namespace XivCommon.Functions {
         }
     }
 
+    /// <summary>
+    /// Options for displaying a BattleTalk window.
+    /// </summary>
     public class BattleTalkOptions {
         /// <summary>
         /// Duration to display the window, in seconds.
@@ -127,6 +137,9 @@ namespace XivCommon.Functions {
         public BattleTalkStyle Style { get; set; } = BattleTalkStyle.Normal;
     }
 
+    /// <summary>
+    /// BattleTalk window styles.
+    /// </summary>
     public enum BattleTalkStyle : byte {
         /// <summary>
         /// A normal battle talk window with a white background.

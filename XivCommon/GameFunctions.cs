@@ -5,6 +5,9 @@ using Dalamud.Game.Text.SeStringHandling;
 using XivCommon.Functions;
 
 namespace XivCommon {
+    /// <summary>
+    /// A class containing game functions
+    /// </summary>
     public class GameFunctions : IDisposable {
         private IntPtr UiModulePtr { get; }
 
@@ -12,8 +15,19 @@ namespace XivCommon {
 
         private GetUiModuleDelegate InternalGetUiModule { get; }
 
+        /// <summary>
+        /// Chat functions
+        /// </summary>
         public Chat Chat { get; }
+
+        /// <summary>
+        /// Party Finder functions
+        /// </summary>
         public PartyFinder PartyFinder { get; }
+
+        /// <summary>
+        /// BattleTalk functions and events
+        /// </summary>
         public BattleTalk BattleTalk { get; }
 
         internal GameFunctions(Hooks hooks, SigScanner scanner, SeStringManager seStringManager) {
@@ -27,11 +41,16 @@ namespace XivCommon {
             this.BattleTalk = new BattleTalk(this, scanner, seStringManager, hooks.HasFlag(Hooks.BattleTalk));
         }
 
+        /// <inheritdoc />
         public void Dispose() {
             this.BattleTalk.Dispose();
             this.PartyFinder.Dispose();
         }
 
+        /// <summary>
+        /// Gets the pointer to the UI module
+        /// </summary>
+        /// <returns>Pointer</returns>
         public IntPtr GetUiModule() {
             return this.InternalGetUiModule(Marshal.ReadIntPtr(this.UiModulePtr));
         }

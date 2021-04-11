@@ -1,6 +1,9 @@
 ﻿using System;
 
 namespace XivCommon {
+    /// <summary>
+    /// Flags for which hooks to use
+    /// </summary>
     [Flags]
     public enum Hooks {
         /// <summary>
