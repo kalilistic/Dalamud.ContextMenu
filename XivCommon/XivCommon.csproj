@@ -5,6 +5,16 @@
         <LangVersion>latest</LangVersion>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <Nullable>enable</Nullable>
+        <Version>1.0.0</Version>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Title>XivCommon</Title>
+        <Authors>ascclemens</Authors>
+        <RepositoryUrl>https://git.sr.ht/~jkcclemens/XivCommon</RepositoryUrl>
+        <Description>A set of common functions, hooks, and events not included in Dalamud.</Description>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
     </PropertyGroup>
 
     <ItemGroup>
