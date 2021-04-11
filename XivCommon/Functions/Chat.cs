@@ -19,6 +19,10 @@ namespace XivCommon.Functions {
             this.ProcessChatBox = Marshal.GetDelegateForFunctionPointer<ProcessChatBoxDelegate>(processChatBoxPtr);
         }
 
+        /// <summary>
+        /// Send a given message to the chat box. <b>This can send chat to the server.</b>
+        /// </summary>
+        /// <param name="message">Message to send</param>
         public void SendMessage(string message) {
             var uiModule = this.Functions.GetUiModule();
 
