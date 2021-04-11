@@ -37,6 +37,15 @@ namespace XivCommon.Functions {
             return this.RequestPfListingsHook!.Original(agent, categoryIdx);
         }
 
+        /// <summary>
+        /// <para>
+        /// Refresh the Party Finder listings. This does not open the Party Finder.
+        /// </para>
+        /// <para>
+        /// This maintains the currently selected category.
+        /// </para>
+        /// </summary>
+        /// <exception cref="InvalidOperationException">If the <see cref="Hooks.PartyFinder"/> hook is not enabled</exception>
         public void RefreshListings() {
             if (!this.Enabled) {
                 throw new InvalidOperationException("PartyFinder hooks are not enabled");

@@ -12,6 +12,9 @@ namespace XivCommon.Functions {
 
         public delegate void BattleTalkEventDelegate(ref SeString sender, ref SeString message, ref BattleTalkOptions options, ref bool isHandled);
 
+        /// <summary>
+        /// The event that is fired when a BattleTalk window is shown.
+        /// </summary>
         public event BattleTalkEventDelegate? OnBattleTalk;
 
         private delegate byte AddBattleTalkDelegate(IntPtr uiModule, IntPtr sender, IntPtr message, float duration, byte style);
@@ -67,6 +70,13 @@ namespace XivCommon.Functions {
             }
         }
 
+        /// <summary>
+        /// Show a BattleTalk window with the given options.
+        /// </summary>
+        /// <param name="sender">The name to attribute to the message</param>
+        /// <param name="message">The message to show in the window</param>
+        /// <param name="options">Optional options for the window</param>
+        /// <exception cref="InvalidOperationException">If the <see cref="Hooks.BattleTalk"/> hook is not enabled</exception>
         public void Show(SeString sender, SeString message, BattleTalkOptions? options = null) {
             this.Show(sender.Encode(), message.Encode(), options);
         }
@@ -98,17 +108,40 @@ namespace XivCommon.Functions {
 
     public class BattleTalkOptions {
         /// <summary>
-        /// Duration of the window in seconds.
+        /// Duration to display the window, in seconds.
         /// </summary>
         public float Duration { get; set; } = 5f;
 
+        /// <summary>
+        /// The style of the window.
+        /// </summary>
         public BattleTalkStyle Style { get; set; } = BattleTalkStyle.Normal;
     }
 
     public enum BattleTalkStyle : byte {
+        /// <summary>
+        /// A normal battle talk window with a white background.
+        /// </summary>
         Normal = 0,
+
+        /// <summary>
+        /// A battle talk window with a blue background and styled edges.
+        /// </summary>
         Aetherial = 6,
+
+        /// <summary>
+        /// A battle talk window styled similarly to a system text message (black background).
+        /// </summary>
         System = 7,
+
+        /// <summary>
+        /// <para>
+        /// A battle talk window with a blue, computer-y background.
+        /// </para>
+        /// <para>
+        /// Used by the Ultima Weapons (Ruby, Emerald, etc.).
+        /// </para>
+        /// </summary>
         Blue = 9,
     }
 }
