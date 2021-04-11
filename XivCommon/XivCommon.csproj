@@ -10,6 +10,7 @@
 
     <PropertyGroup>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <Title>XivCommon</Title>
         <Authors>ascclemens</Authors>
         <RepositoryUrl>https://git.sr.ht/~jkcclemens/XivCommon</RepositoryUrl>
