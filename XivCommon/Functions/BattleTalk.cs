@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Text;
 using Dalamud.Game;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Hooking;
@@ -9,6 +8,7 @@ namespace XivCommon.Functions {
     public class BattleTalk : IDisposable {
         private GameFunctions Functions { get; }
         private SeStringManager SeStringManager { get; }
+        private bool Enabled { get; }
 
         public delegate void BattleTalkEventDelegate(ref SeString sender, ref SeString message, ref BattleTalkOptions options, ref bool isHandled);
 
@@ -16,11 +16,16 @@ namespace XivCommon.Functions {
 
         private delegate byte AddBattleTalkDelegate(IntPtr uiModule, IntPtr sender, IntPtr message, float duration, byte style);
 
-        private Hook<AddBattleTalkDelegate> AddBattleTextHook { get; }
+        private Hook<AddBattleTalkDelegate>? AddBattleTextHook { get; }
 
-        internal BattleTalk(GameFunctions functions, SigScanner scanner, SeStringManager seStringManager) {
+        internal BattleTalk(GameFunctions functions, SigScanner scanner, SeStringManager seStringManager, bool hook) {
             this.Functions = functions;
             this.SeStringManager = seStringManager;
+            this.Enabled = hook;
+
+            if (!hook) {
+                return;
+            }
 
             var addBattleTextPtr = scanner.ScanText("48 89 5C 24 ?? 57 48 83 EC 50 48 8B 01 49 8B D8 0F 29 74 24 ?? 48 8B FA 0F 28 F3 FF 50 40 C7 44 24 ?? ?? ?? ?? ??");
             this.AddBattleTextHook = new Hook<AddBattleTalkDelegate>(addBattleTextPtr, new AddBattleTalkDelegate(this.AddBattleTalkDetour));
@@ -28,7 +33,7 @@ namespace XivCommon.Functions {
         }
 
         public void Dispose() {
-            this.AddBattleTextHook.Dispose();
+            this.AddBattleTextHook?.Dispose();
         }
 
         private unsafe byte AddBattleTalkDetour(IntPtr uiModule, IntPtr senderPtr, IntPtr messagePtr, float duration, byte style) {
@@ -58,7 +63,7 @@ namespace XivCommon.Functions {
             var finalMessage = message.Encode().Terminate();
 
             fixed (byte* fSenderPtr = finalSender, fMessagePtr = finalMessage) {
-                return this.AddBattleTextHook.Original(uiModule, (IntPtr) fSenderPtr, (IntPtr) fMessagePtr, options.Duration, (byte) options.Style);
+                return this.AddBattleTextHook!.Original(uiModule, (IntPtr) fSenderPtr, (IntPtr) fMessagePtr, options.Duration, (byte) options.Style);
             }
         }
 
@@ -67,6 +72,10 @@ namespace XivCommon.Functions {
         }
 
         private void Show(byte[] sender, byte[] message, BattleTalkOptions? options) {
+            if (!this.Enabled) {
+                throw new InvalidOperationException("BattleTalk hooks are not enabled");
+            }
+
             if (sender.Length == 0) {
                 throw new ArgumentException("sender cannot be empty", nameof(sender));
             }
