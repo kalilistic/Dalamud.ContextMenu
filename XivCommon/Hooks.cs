@@ -13,7 +13,7 @@ namespace XivCommon {
         /// <summary>
         /// The BattleTalk hook.
         ///
-        /// This hook is used in order to enable all BattleTalk functions.
+        /// This hook is used in order to enable the BattleTalk events.
         /// </summary>
         BattleTalk,
 
