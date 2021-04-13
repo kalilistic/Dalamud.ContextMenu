@@ -23,12 +23,18 @@ namespace XivCommon {
         /// BattleTalk functions and events
         /// </summary>
         public BattleTalk BattleTalk { get; }
+        /// <summary>
+        /// Examine functions
+        /// </summary>
+        public Examine Examine { get; }
 
         internal GameFunctions(Hooks hooks, DalamudPluginInterface @interface) {
             this.Interface = @interface;
+
             this.Chat = new Chat(this, @interface.TargetModuleScanner);
             this.PartyFinder = new PartyFinder(@interface.TargetModuleScanner, hooks.HasFlag(Hooks.PartyFinder));
             this.BattleTalk = new BattleTalk(this, @interface.TargetModuleScanner, @interface.SeStringManager, hooks.HasFlag(Hooks.BattleTalk));
+            this.Examine = new Examine(this, @interface.TargetModuleScanner);
         }
 
         /// <inheritdoc />
