@@ -55,7 +55,7 @@ namespace XivCommon.Functions {
                 throw new InvalidOperationException("PartyFinder hooks are not enabled");
             }
 
-            // Updated 5.41
+            // Updated 5.5
             const int categoryOffset = 10_655;
 
             if (this.PartyFinderAgent == IntPtr.Zero) {

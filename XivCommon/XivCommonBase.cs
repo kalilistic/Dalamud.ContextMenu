@@ -22,7 +22,7 @@ namespace XivCommon {
         /// <param name="interface">The <see cref="DalamudPluginInterface"/> of the plugin constructing this base</param>
         /// <param name="hooks">Flags indicating which hooks to enable</param>
         public XivCommonBase(DalamudPluginInterface @interface, Hooks hooks = HooksExt.DefaultHooks) {
-            this.Functions = new GameFunctions(hooks, @interface.TargetModuleScanner, @interface.SeStringManager);
+            this.Functions = new GameFunctions(hooks, @interface);
         }
 
         /// <inheritdoc />
