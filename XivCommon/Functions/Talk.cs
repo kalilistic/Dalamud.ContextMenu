@@ -88,9 +88,10 @@ namespace XivCommon.Functions {
                 fixed (byte* namePtr = newName, textPtr = newText) {
                     this.SetAtkValueString(data + NameOffset, (IntPtr) namePtr);
                     this.SetAtkValueString(data + TextOffset, (IntPtr) textPtr);
-                    this.AddonTalkV45Hook!.Original(addon, a2, data);
                 }
             }
+
+            this.AddonTalkV45Hook!.Original(addon, a2, data);
         }
     }
 
