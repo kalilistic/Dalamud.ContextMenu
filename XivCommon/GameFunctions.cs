@@ -28,17 +28,27 @@ namespace XivCommon {
         /// </summary>
         public Examine Examine { get; }
 
+        /// <summary>
+        /// Talk events
+        /// </summary>
+        public Talk Talk { get; }
+
         internal GameFunctions(Hooks hooks, DalamudPluginInterface @interface) {
             this.Interface = @interface;
 
-            this.Chat = new Chat(this, @interface.TargetModuleScanner);
-            this.PartyFinder = new PartyFinder(@interface.TargetModuleScanner, hooks.HasFlag(Hooks.PartyFinder));
-            this.BattleTalk = new BattleTalk(this, @interface.TargetModuleScanner, @interface.SeStringManager, hooks.HasFlag(Hooks.BattleTalk));
-            this.Examine = new Examine(this, @interface.TargetModuleScanner);
+            var scanner = @interface.TargetModuleScanner;
+            var seStringManager = @interface.SeStringManager;
+
+            this.Chat = new Chat(this, scanner);
+            this.PartyFinder = new PartyFinder(scanner, hooks.HasFlag(Hooks.PartyFinder));
+            this.BattleTalk = new BattleTalk(this, scanner, seStringManager, hooks.HasFlag(Hooks.BattleTalk));
+            this.Examine = new Examine(this, scanner);
+            this.Talk = new Talk(scanner, seStringManager, hooks.HasFlag(Hooks.Talk));
         }
 
         /// <inheritdoc />
         public void Dispose() {
+            this.Talk.Dispose();
             this.BattleTalk.Dispose();
             this.PartyFinder.Dispose();
         }

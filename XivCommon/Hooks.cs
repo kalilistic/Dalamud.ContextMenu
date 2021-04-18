@@ -26,6 +26,13 @@ namespace XivCommon {
         /// This hook is used in order to enable all Party Finder functions.
         /// </summary>
         PartyFinder,
+
+        /// <summary>
+        /// The Talk hooks.
+        ///
+        /// This hook is used in order to enable the Talk events.
+        /// </summary>
+        Talk,
     }
 
     internal static class HooksExt {
