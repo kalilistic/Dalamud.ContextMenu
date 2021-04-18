@@ -55,11 +55,22 @@ namespace XivCommon.Functions {
             this.AddBattleTalkHook?.Dispose();
         }
 
-        private unsafe byte AddBattleTalkDetour(IntPtr uiModule, IntPtr senderPtr, IntPtr messagePtr, float duration, byte style) {
+        private byte AddBattleTalkDetour(IntPtr uiModule, IntPtr senderPtr, IntPtr messagePtr, float duration, byte style) {
             if (this.OnBattleTalk == null) {
-                return this.AddBattleTalkHook!.Original(uiModule, senderPtr, messagePtr, duration, style);
+                goto Return;
             }
 
+            try {
+                return this.AddBattleTalkDetourInner(uiModule, senderPtr, messagePtr, duration, style);
+            } catch (Exception ex) {
+                PluginLog.LogError(ex, "Exception in BattleTalk detour");
+            }
+
+            Return:
+            return this.AddBattleTalkHook!.Original(uiModule, senderPtr, messagePtr, duration, style);
+        }
+
+        private unsafe byte AddBattleTalkDetourInner(IntPtr uiModule, IntPtr senderPtr, IntPtr messagePtr, float duration, byte style) {
             var rawSender = Util.ReadTerminated(senderPtr);
             var rawMessage = Util.ReadTerminated(messagePtr);
 
@@ -75,7 +86,7 @@ namespace XivCommon.Functions {
             try {
                 this.OnBattleTalk?.Invoke(ref sender, ref message, ref options, ref handled);
             } catch (Exception ex) {
-                PluginLog.Log(ex, "Exception in BattleTalk detour");
+                PluginLog.Log(ex, "Exception in BattleTalk event");
             }
 
             if (handled) {

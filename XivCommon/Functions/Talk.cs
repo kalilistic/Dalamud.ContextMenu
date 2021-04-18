@@ -62,10 +62,20 @@ namespace XivCommon.Functions {
 
         private void AddonTalkV45Detour(IntPtr addon, IntPtr a2, IntPtr data) {
             if (this.OnTalk == null) {
-                this.AddonTalkV45Hook!.Original(addon, a2, data);
-                return;
+                goto Return;
             }
 
+            try {
+                this.AddonTalkV45DetourInner(data);
+            } catch (Exception ex) {
+                PluginLog.LogError(ex, "Exception in Talk detour");
+            }
+
+            Return:
+            this.AddonTalkV45Hook!.Original(addon, a2, data);
+        }
+
+        private void AddonTalkV45DetourInner(IntPtr data) {
             var rawName = Util.ReadTerminated(Marshal.ReadIntPtr(data + NameOffset + 8));
             var rawText = Util.ReadTerminated(Marshal.ReadIntPtr(data + TextOffset + 8));
             var style = (TalkStyle) Marshal.ReadByte(data + StyleOffset);
@@ -76,7 +86,7 @@ namespace XivCommon.Functions {
             try {
                 this.OnTalk?.Invoke(ref name, ref text, ref style);
             } catch (Exception ex) {
-                PluginLog.LogError(ex, "Exception in Talk detour");
+                PluginLog.LogError(ex, "Exception in Talk event");
             }
 
             var newName = name.Encode().Terminate();
@@ -90,8 +100,6 @@ namespace XivCommon.Functions {
                     this.SetAtkValueString(data + TextOffset, (IntPtr) textPtr);
                 }
             }
-
-            this.AddonTalkV45Hook!.Original(addon, a2, data);
         }
     }
 
