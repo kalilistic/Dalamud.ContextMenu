@@ -56,6 +56,10 @@ namespace XivCommon.Functions {
         }
 
         private unsafe byte AddBattleTalkDetour(IntPtr uiModule, IntPtr senderPtr, IntPtr messagePtr, float duration, byte style) {
+            if (this.OnBattleTalk == null) {
+                return this.AddBattleTalkHook!.Original(uiModule, senderPtr, messagePtr, duration, style);
+            }
+
             var rawSender = Util.ReadTerminated(senderPtr);
             var rawMessage = Util.ReadTerminated(messagePtr);
 
