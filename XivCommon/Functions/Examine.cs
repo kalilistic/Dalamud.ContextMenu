@@ -11,7 +11,7 @@ namespace XivCommon.Functions {
     public class Examine {
         private GameFunctions Functions { get; }
 
-        private delegate IntPtr GetListDelegate(IntPtr basePtr);
+        private delegate IntPtr GetAgentModuleDelegate(IntPtr basePtr);
 
         private delegate long RequestCharInfoDelegate(IntPtr ptr);
 
@@ -55,10 +55,10 @@ namespace XivCommon.Functions {
             // if 29f8 ever changes, I'd just scan for it in old binary and find what it is in the new binary at the same spot
             // 40 55 53 57 41 54 41 55 41 56 48 8D 6C 24 ??
             var uiModule = this.Functions.GetUiModule();
-            var getListPtr = FollowPtrChain(uiModule, new[] {0, 0x110});
-            var getList = Marshal.GetDelegateForFunctionPointer<GetListDelegate>(getListPtr);
-            var list = getList(uiModule);
-            var rciData = Marshal.ReadIntPtr(list + 0x1A0);
+            var getAgentModulePtr = FollowPtrChain(uiModule, new[] {0, 0x110});
+            var getAgentModule = Marshal.GetDelegateForFunctionPointer<GetAgentModuleDelegate>(getAgentModulePtr);
+            var agentModule = getAgentModule(uiModule);
+            var rciData = Marshal.ReadIntPtr(agentModule + 0x1A0);
 
             unsafe {
                 // offsets at sig E8 ?? ?? ?? ?? 33 C0 EB 4C
