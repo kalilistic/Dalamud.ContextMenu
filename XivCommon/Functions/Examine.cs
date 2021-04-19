@@ -41,6 +41,14 @@ namespace XivCommon.Functions {
         /// </summary>
         /// <param name="actor">Actor to open window for</param>
         public void OpenExamineWindow(Actor actor) {
+            this.OpenExamineWindow(actor.ActorId);
+        }
+
+        /// <summary>
+        /// Opens the Examine window for the actor with the specified ID.
+        /// </summary>
+        /// <param name="actorId">Actor ID to open window for</param>
+        public void OpenExamineWindow(int actorId) {
             // NOTES LAST UPDATED: 5.45
 
             // offsets and stuff come from the beginning of case 0x2c (around line 621 in IDA)
@@ -56,9 +64,9 @@ namespace XivCommon.Functions {
                 // offsets at sig E8 ?? ?? ?? ?? 33 C0 EB 4C
                 // this is called at the end of the 2c case
                 var raw = (int*) rciData;
-                *(raw + 10) = actor.ActorId;
-                *(raw + 11) = actor.ActorId;
-                *(raw + 12) = actor.ActorId;
+                *(raw + 10) = actorId;
+                *(raw + 11) = actorId;
+                *(raw + 12) = actorId;
                 *(raw + 13) = -536870912;
                 *(raw + 311) = 0;
             }
