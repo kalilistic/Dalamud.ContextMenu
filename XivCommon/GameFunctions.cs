@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection;
 using Dalamud.Plugin;
 using XivCommon.Functions;
 
@@ -33,21 +34,31 @@ namespace XivCommon {
         /// </summary>
         public Talk Talk { get; }
 
+        /// <summary>
+        ///  Chat bubble functions and events
+        /// </summary>
+        public ChatBubbles ChatBubbles { get; }
+
         internal GameFunctions(Hooks hooks, DalamudPluginInterface @interface) {
             this.Interface = @interface;
 
             var scanner = @interface.TargetModuleScanner;
             var seStringManager = @interface.SeStringManager;
 
+            var dalamudField = @interface.GetType().GetField("dalamud", BindingFlags.Instance | BindingFlags.NonPublic);
+            var dalamud = (Dalamud.Dalamud) dalamudField!.GetValue(@interface);
+
             this.Chat = new Chat(this, scanner);
             this.PartyFinder = new PartyFinder(scanner, hooks.HasFlag(Hooks.PartyFinder));
             this.BattleTalk = new BattleTalk(this, scanner, seStringManager, hooks.HasFlag(Hooks.BattleTalk));
             this.Examine = new Examine(this, scanner);
             this.Talk = new Talk(scanner, seStringManager, hooks.HasFlag(Hooks.Talk));
+            this.ChatBubbles = new ChatBubbles(dalamud, scanner, seStringManager, hooks.HasFlag(Hooks.ChatBubbles));
         }
 
         /// <inheritdoc />
         public void Dispose() {
+            this.ChatBubbles.Dispose();
             this.Talk.Dispose();
             this.BattleTalk.Dispose();
             this.PartyFinder.Dispose();

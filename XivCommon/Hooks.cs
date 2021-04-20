@@ -33,6 +33,13 @@ namespace XivCommon {
         /// This hook is used in order to enable the Talk events.
         /// </summary>
         Talk,
+
+        /// <summary>
+        /// The chat bubbles hooks.
+        ///
+        /// This hook is used in order to enable the chat bubbles events.
+        /// </summary>
+        ChatBubbles,
     }
 
     internal static class HooksExt {
