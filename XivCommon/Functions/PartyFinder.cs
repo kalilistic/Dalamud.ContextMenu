@@ -93,9 +93,11 @@ namespace XivCommon.Functions {
             var ret = this.JoinPfHook!.Original(manager, a2, a3, packetData, a5);
 
             try {
-                var id = (uint) Marshal.ReadInt32(packetData + idOffset);
-                if (this.Listings.TryGetValue(id, out var listing)) {
-                    this.JoinParty?.Invoke(listing);
+                if (packetData != IntPtr.Zero) {
+                    var id = (uint) Marshal.ReadInt32(packetData + idOffset);
+                    if (this.Listings.TryGetValue(id, out var listing)) {
+                        this.JoinParty?.Invoke(listing);
+                    }
                 }
             } catch (Exception ex) {
                 PluginLog.LogError(ex, "Exception in PF join detour");
