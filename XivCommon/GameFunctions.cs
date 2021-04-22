@@ -16,7 +16,7 @@ namespace XivCommon {
         public Chat Chat { get; }
 
         /// <summary>
-        /// Party Finder functions
+        /// Party Finder functions and events
         /// </summary>
         public PartyFinder PartyFinder { get; }
 
@@ -24,6 +24,7 @@ namespace XivCommon {
         /// BattleTalk functions and events
         /// </summary>
         public BattleTalk BattleTalk { get; }
+
         /// <summary>
         /// Examine functions
         /// </summary>
@@ -49,7 +50,7 @@ namespace XivCommon {
             var dalamud = (Dalamud.Dalamud) dalamudField!.GetValue(@interface);
 
             this.Chat = new Chat(this, scanner);
-            this.PartyFinder = new PartyFinder(scanner, hooks.HasFlag(Hooks.PartyFinder));
+            this.PartyFinder = new PartyFinder(scanner, @interface.Framework.Gui.PartyFinder, hooks.HasFlag(Hooks.PartyFinder));
             this.BattleTalk = new BattleTalk(this, scanner, seStringManager, hooks.HasFlag(Hooks.BattleTalk));
             this.Examine = new Examine(this, scanner);
             this.Talk = new Talk(scanner, seStringManager, hooks.HasFlag(Hooks.Talk));
