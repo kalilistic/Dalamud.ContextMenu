@@ -14,7 +14,7 @@ namespace XivCommon.Functions {
     public class PartyFinder : IDisposable {
         private delegate byte RequestPartyFinderListingsDelegate(IntPtr agent, byte categoryIdx);
 
-        private delegate IntPtr JoinPfDelegate(IntPtr manager, IntPtr a2, int a3, IntPtr packetData, uint a5);
+        private delegate IntPtr JoinPfDelegate(IntPtr manager, IntPtr a2, int type, IntPtr packetData, uint a5);
 
         private RequestPartyFinderListingsDelegate RequestPartyFinderListings { get; }
         private Hook<RequestPartyFinderListingsDelegate>? RequestPfListingsHook { get; }
@@ -86,11 +86,15 @@ namespace XivCommon.Functions {
             return this.RequestPfListingsHook!.Original(agent, categoryIdx);
         }
 
-        private IntPtr JoinPfDetour(IntPtr manager, IntPtr a2, int a3, IntPtr packetData, uint a5) {
+        private IntPtr JoinPfDetour(IntPtr manager, IntPtr a2, int type, IntPtr packetData, uint a5) {
             // Updated: 5.5
             const int idOffset = -0x20;
 
-            var ret = this.JoinPfHook!.Original(manager, a2, a3, packetData, a5);
+            var ret = this.JoinPfHook!.Original(manager, a2, type, packetData, a5);
+
+            if (type != 1) {
+                return ret;
+            }
 
             try {
                 if (packetData != IntPtr.Zero) {
