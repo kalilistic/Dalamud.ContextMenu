@@ -27,7 +27,7 @@ namespace XivCommon.Functions {
 
         /// <summary>
         /// <para>
-        /// The event that is fired when the player joins a party via Party Finder.
+        /// The event that is fired when the player joins a <b>cross-world</b> party via Party Finder.
         /// </para>
         /// <para>
         /// Requires the <see cref="Hooks.PartyFinder"/> hook to be enabled.
@@ -92,7 +92,12 @@ namespace XivCommon.Functions {
 
             var ret = this.JoinPfHook!.Original(manager, a2, type, packetData, a5);
 
-            if (type != 1) {
+            PluginLog.Log($"Join type: {type}");
+            // 0 = join cross-world party via invite or convert normal party to cross-world
+            // 1 = join normal pf
+            // 3 = leave duty while in cross-world party
+
+            if (this.JoinParty == null || type != 1) {
                 return ret;
             }
 
