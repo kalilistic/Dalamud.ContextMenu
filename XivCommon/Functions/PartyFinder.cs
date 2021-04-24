@@ -30,7 +30,7 @@ namespace XivCommon.Functions {
         /// The event that is fired when the player joins a <b>cross-world</b> party via Party Finder.
         /// </para>
         /// <para>
-        /// Requires the <see cref="Hooks.PartyFinder"/> hook to be enabled.
+        /// Requires the <see cref="Hooks.PartyFinderJoins"/> hook to be enabled.
         /// </para>
         /// </summary>
         public event JoinPfEventDelegate? JoinParty;
