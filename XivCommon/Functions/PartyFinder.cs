@@ -36,37 +36,42 @@ namespace XivCommon.Functions {
         public event JoinPfEventDelegate? JoinParty;
 
         private PartyFinderGui PartyFinderGui { get; }
-        private bool Enabled { get; }
+        private bool JoinsEnabled { get; }
+        private bool ListingsEnabled { get; }
         private IntPtr PartyFinderAgent { get; set; } = IntPtr.Zero;
         private Dictionary<uint, PartyFinderListing> Listings { get; } = new();
         private int LastBatch { get; set; } = -1;
 
-        internal PartyFinder(SigScanner scanner, PartyFinderGui partyFinderGui, bool hook) {
+        internal PartyFinder(SigScanner scanner, PartyFinderGui partyFinderGui, Hooks hooks) {
             this.PartyFinderGui = partyFinderGui;
+
+            this.ListingsEnabled = hooks.HasFlag(Hooks.PartyFinderListings);
+            this.JoinsEnabled = hooks.HasFlag(Hooks.PartyFinderJoins);
 
             var requestPfPtr = scanner.ScanText("48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC 40 0F 10 81 ?? ?? ?? ??");
 
             this.RequestPartyFinderListings = Marshal.GetDelegateForFunctionPointer<RequestPartyFinderListingsDelegate>(requestPfPtr);
 
-            this.Enabled = hook;
-
-            if (!hook) {
-                return;
+            if (this.ListingsEnabled) {
+                this.RequestPfListingsHook = new Hook<RequestPartyFinderListingsDelegate>(requestPfPtr, new RequestPartyFinderListingsDelegate(this.OnRequestPartyFinderListings));
+                this.RequestPfListingsHook.Enable();
             }
 
-            this.RequestPfListingsHook = new Hook<RequestPartyFinderListingsDelegate>(requestPfPtr, new RequestPartyFinderListingsDelegate(this.OnRequestPartyFinderListings));
-            this.RequestPfListingsHook.Enable();
+            if (this.JoinsEnabled) {
+                var joinPtr = scanner.ScanText("E8 ?? ?? ?? ?? 0F B7 47 28");
+                this.JoinPfHook = new Hook<JoinPfDelegate>(joinPtr, new JoinPfDelegate(this.JoinPfDetour));
+                this.JoinPfHook.Enable();
 
-            var joinPtr = scanner.ScanText("E8 ?? ?? ?? ?? 0F B7 47 28");
-            this.JoinPfHook = new Hook<JoinPfDelegate>(joinPtr, new JoinPfDelegate(this.JoinPfDetour));
-            this.JoinPfHook.Enable();
-
-            this.PartyFinderGui.ReceiveListing += this.ReceiveListing;
+                this.PartyFinderGui.ReceiveListing += this.ReceiveListing;
+            }
         }
 
         /// <inheritdoc />
         public void Dispose() {
-            this.PartyFinderGui.ReceiveListing -= this.ReceiveListing;
+            if (this.JoinsEnabled) {
+                this.PartyFinderGui.ReceiveListing -= this.ReceiveListing;
+            }
+
             this.JoinPfHook?.Dispose();
             this.RequestPfListingsHook?.Dispose();
         }
@@ -116,9 +121,9 @@ namespace XivCommon.Functions {
         /// This maintains the currently selected category.
         /// </para>
         /// </summary>
-        /// <exception cref="InvalidOperationException">If the <see cref="Hooks.PartyFinder"/> hook is not enabled</exception>
+        /// <exception cref="InvalidOperationException">If the <see cref="Hooks.PartyFinderListings"/> hook is not enabled</exception>
         public void RefreshListings() {
-            if (!this.Enabled) {
+            if (!this.ListingsEnabled) {
                 throw new InvalidOperationException("PartyFinder hooks are not enabled");
             }
 

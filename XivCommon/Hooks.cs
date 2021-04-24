@@ -21,11 +21,21 @@ namespace XivCommon {
         BattleTalk,
 
         /// <summary>
-        /// The Party Finder hooks.
+        /// Hooks used for refreshing Party Finder listings.
+        /// </summary>
+        PartyFinderListings,
+
+        /// <summary>
+        /// Hooks used for Party Finder join events.
+        /// </summary>
+        PartyFinderJoins,
+
+        /// <summary>
+        /// All Party Finder hooks.
         ///
         /// This hook is used in order to enable all Party Finder functions.
         /// </summary>
-        PartyFinder,
+        PartyFinder = PartyFinderListings | PartyFinderJoins,
 
         /// <summary>
         /// The Talk hooks.
