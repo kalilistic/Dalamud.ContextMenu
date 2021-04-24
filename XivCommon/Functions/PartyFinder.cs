@@ -62,22 +62,17 @@ namespace XivCommon.Functions {
                 }
             }
 
-            if (this.JoinsEnabled) {
-                if (scanner.TryScanText(Signatures.JoinCrossParty, out var joinPtr, "Party Finder joins")) {
-                    this.JoinPfHook = new Hook<JoinPfDelegate>(joinPtr, new JoinPfDelegate(this.JoinPfDetour));
-                    this.JoinPfHook.Enable();
+            if (this.JoinsEnabled && scanner.TryScanText(Signatures.JoinCrossParty, out var joinPtr, "Party Finder joins")) {
+                this.JoinPfHook = new Hook<JoinPfDelegate>(joinPtr, new JoinPfDelegate(this.JoinPfDetour));
+                this.JoinPfHook.Enable();
 
-                    this.PartyFinderGui.ReceiveListing += this.ReceiveListing;
-                }
+                this.PartyFinderGui.ReceiveListing += this.ReceiveListing;
             }
         }
 
         /// <inheritdoc />
         public void Dispose() {
-            if (this.JoinsEnabled) {
-                this.PartyFinderGui.ReceiveListing -= this.ReceiveListing;
-            }
-
+            this.PartyFinderGui.ReceiveListing -= this.ReceiveListing;
             this.JoinPfHook?.Dispose();
             this.RequestPfListingsHook?.Dispose();
         }
