@@ -13,7 +13,7 @@ namespace XivCommon {
         /// <param name="result">pointer where signature was found or <see cref="IntPtr.Zero"/> if not found</param>
         /// <param name="name">name of this signature - if specified, a warning will be printed if the signature could not be found</param>
         /// <returns>true if signature was found</returns>
-        internal static bool ScanTextSafe(this SigScanner scanner, string sig, out IntPtr result, string? name = null) {
+        internal static bool TryScanText(this SigScanner scanner, string sig, out IntPtr result, string? name = null) {
             result = IntPtr.Zero;
             try {
                 result = scanner.ScanText(sig);

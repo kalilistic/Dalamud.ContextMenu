@@ -53,7 +53,7 @@ namespace XivCommon.Functions {
             this.ListingsEnabled = hooks.HasFlag(Hooks.PartyFinderListings);
             this.JoinsEnabled = hooks.HasFlag(Hooks.PartyFinderJoins);
 
-            if (scanner.ScanTextSafe(Signatures.RequestListings, out var requestPfPtr, "Party Finder listings")) {
+            if (scanner.TryScanText(Signatures.RequestListings, out var requestPfPtr, "Party Finder listings")) {
                 this.RequestPartyFinderListings = Marshal.GetDelegateForFunctionPointer<RequestPartyFinderListingsDelegate>(requestPfPtr);
 
                 if (this.ListingsEnabled) {
@@ -63,7 +63,7 @@ namespace XivCommon.Functions {
             }
 
             if (this.JoinsEnabled) {
-                if (scanner.ScanTextSafe(Signatures.JoinCrossParty, out var joinPtr, "Party Finder joins")) {
+                if (scanner.TryScanText(Signatures.JoinCrossParty, out var joinPtr, "Party Finder joins")) {
                     this.JoinPfHook = new Hook<JoinPfDelegate>(joinPtr, new JoinPfDelegate(this.JoinPfDetour));
                     this.JoinPfHook.Enable();
 

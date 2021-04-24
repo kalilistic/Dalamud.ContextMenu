@@ -22,7 +22,7 @@ namespace XivCommon.Functions {
         internal Chat(GameFunctions functions, SigScanner scanner) {
             this.Functions = functions;
 
-            if (scanner.ScanTextSafe(Signatures.SendChat, out var processChatBoxPtr, "chat sending")) {
+            if (scanner.TryScanText(Signatures.SendChat, out var processChatBoxPtr, "chat sending")) {
                 this.ProcessChatBox = Marshal.GetDelegateForFunctionPointer<ProcessChatBoxDelegate>(processChatBoxPtr);
             }
         }

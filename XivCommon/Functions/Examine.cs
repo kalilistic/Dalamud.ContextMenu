@@ -25,7 +25,7 @@ namespace XivCommon.Functions {
             this.Functions = functions;
 
             // got this by checking what accesses rciData below
-            if (scanner.ScanTextSafe(Signatures.RequestCharacterInfo, out var rciPtr, "Examine")) {
+            if (scanner.TryScanText(Signatures.RequestCharacterInfo, out var rciPtr, "Examine")) {
                 this.RequestCharacterInfo = Marshal.GetDelegateForFunctionPointer<RequestCharInfoDelegate>(rciPtr);
             }
         }

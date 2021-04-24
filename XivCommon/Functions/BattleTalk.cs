@@ -43,7 +43,7 @@ namespace XivCommon.Functions {
             this.SeStringManager = seStringManager;
             this.HookEnabled = hook;
 
-            if (scanner.ScanTextSafe(Signatures.AddBattleTalk, out var addBattleTalkPtr, "battle talk")) {
+            if (scanner.TryScanText(Signatures.AddBattleTalk, out var addBattleTalkPtr, "battle talk")) {
                 this.AddBattleTalk = Marshal.GetDelegateForFunctionPointer<AddBattleTalkDelegate>(addBattleTalkPtr);
 
                 if (this.HookEnabled) {

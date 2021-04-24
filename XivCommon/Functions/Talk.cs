@@ -48,7 +48,7 @@ namespace XivCommon.Functions {
         internal Talk(SigScanner scanner, SeStringManager manager, bool hooksEnabled) {
             this.SeStringManager = manager;
 
-            if (scanner.ScanTextSafe(Signatures.SetAtkValue, out var setAtkPtr, "Talk - set atk value")) {
+            if (scanner.TryScanText(Signatures.SetAtkValue, out var setAtkPtr, "Talk - set atk value")) {
                 this.SetAtkValueString = Marshal.GetDelegateForFunctionPointer<SetAtkValueStringDelegate>(setAtkPtr);
             } else {
                 return;
@@ -58,7 +58,7 @@ namespace XivCommon.Functions {
                 return;
             }
 
-            if (scanner.ScanTextSafe(Signatures.ShowMessageBox, out var showMessageBoxPtr, "Talk")) {
+            if (scanner.TryScanText(Signatures.ShowMessageBox, out var showMessageBoxPtr, "Talk")) {
                 this.AddonTalkV45Hook = new Hook<AddonTalkV45Delegate>(showMessageBoxPtr, new AddonTalkV45Delegate(this.AddonTalkV45Detour));
                 this.AddonTalkV45Hook.Enable();
             }
