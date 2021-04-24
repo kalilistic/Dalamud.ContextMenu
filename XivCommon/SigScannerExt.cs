@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using Dalamud.Game;
-using Dalamud.Plugin;
 
 namespace XivCommon {
     internal static class SigScannerExt {
