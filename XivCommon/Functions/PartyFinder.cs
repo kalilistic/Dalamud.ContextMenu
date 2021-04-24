@@ -57,18 +57,18 @@ namespace XivCommon.Functions {
             this.RequestPfListingsHook = new Hook<RequestPartyFinderListingsDelegate>(requestPfPtr, new RequestPartyFinderListingsDelegate(this.OnRequestPartyFinderListings));
             this.RequestPfListingsHook.Enable();
 
-            this.PartyFinderGui.ReceiveListing += this.ReceiveListing;
-
             var joinPtr = scanner.ScanText("E8 ?? ?? ?? ?? 0F B7 47 28");
             this.JoinPfHook = new Hook<JoinPfDelegate>(joinPtr, new JoinPfDelegate(this.JoinPfDetour));
             this.JoinPfHook.Enable();
+
+            this.PartyFinderGui.ReceiveListing += this.ReceiveListing;
         }
 
         /// <inheritdoc />
         public void Dispose() {
             this.PartyFinderGui.ReceiveListing -= this.ReceiveListing;
-            this.RequestPfListingsHook?.Dispose();
             this.JoinPfHook?.Dispose();
+            this.RequestPfListingsHook?.Dispose();
         }
 
         private void ReceiveListing(PartyFinderListing listing, PartyFinderListingEventArgs args) {
@@ -92,12 +92,7 @@ namespace XivCommon.Functions {
 
             var ret = this.JoinPfHook!.Original(manager, a2, type, packetData, a5);
 
-            PluginLog.Log($"Join type: {type}");
-            // 0 = join cross-world party via invite or convert normal party to cross-world
-            // 1 = join normal pf
-            // 3 = leave duty while in cross-world party
-
-            if (this.JoinParty == null || type != 1) {
+            if (this.JoinParty == null || (JoinType) type != JoinType.PartyFinder) {
                 return ret;
             }
 
@@ -139,5 +134,26 @@ namespace XivCommon.Functions {
             var categoryIdx = Marshal.ReadByte(this.PartyFinderAgent + categoryOffset);
             this.RequestPartyFinderListings(this.PartyFinderAgent, categoryIdx);
         }
+    }
+
+    internal enum JoinType : byte {
+        /// <summary>
+        /// Join via invite or party conversion.
+        /// </summary>
+        Normal = 0,
+
+        /// <summary>
+        /// Join via Party Finder.
+        /// </summary>
+        PartyFinder = 1,
+
+        Unknown2 = 2,
+
+        /// <summary>
+        /// Remain in cross-world party after leaving a duty.
+        /// </summary>
+        LeaveDuty = 3,
+
+        Unknown4 = 4,
     }
 }
