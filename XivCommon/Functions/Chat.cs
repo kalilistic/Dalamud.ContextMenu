@@ -9,24 +9,34 @@ namespace XivCommon.Functions {
     /// A class containing chat functionality
     /// </summary>
     public class Chat {
+        private static class Signatures {
+            internal const string SendChat = "48 89 5C 24 ?? 57 48 83 EC 20 48 8B FA 48 8B D9 45 84 C9";
+        }
+
         private GameFunctions Functions { get; }
 
         private delegate void ProcessChatBoxDelegate(IntPtr uiModule, IntPtr message, IntPtr unused, byte a4);
 
-        private ProcessChatBoxDelegate ProcessChatBox { get; }
+        private ProcessChatBoxDelegate? ProcessChatBox { get; }
 
         internal Chat(GameFunctions functions, SigScanner scanner) {
             this.Functions = functions;
 
-            var processChatBoxPtr = scanner.ScanText("48 89 5C 24 ?? 57 48 83 EC 20 48 8B FA 48 8B D9 45 84 C9");
-            this.ProcessChatBox = Marshal.GetDelegateForFunctionPointer<ProcessChatBoxDelegate>(processChatBoxPtr);
+            if (scanner.ScanTextSafe(Signatures.SendChat, out var processChatBoxPtr, "chat sending")) {
+                this.ProcessChatBox = Marshal.GetDelegateForFunctionPointer<ProcessChatBoxDelegate>(processChatBoxPtr);
+            }
         }
 
         /// <summary>
         /// Send a given message to the chat box. <b>This can send chat to the server.</b>
         /// </summary>
         /// <param name="message">Message to send</param>
+        /// <exception cref="InvalidOperationException">If the signature for this function could not be found</exception>
         public void SendMessage(string message) {
+            if (this.ProcessChatBox == null) {
+                throw new InvalidOperationException("Could not find signature for chat sending");
+            }
+
             var uiModule = this.Functions.GetUiModule();
 
             using var payload = new ChatPayload(message);

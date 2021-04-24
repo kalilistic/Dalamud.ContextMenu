@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using Dalamud.Plugin;
 
 namespace XivCommon {
     internal static class Util {
-        public static byte[] Terminate(this byte[] array) {
+        internal static byte[] Terminate(this byte[] array) {
             var terminated = new byte[array.Length + 1];
             Array.Copy(array, terminated, array.Length);
             terminated[terminated.Length - 1] = 0;
@@ -11,7 +12,7 @@ namespace XivCommon {
             return terminated;
         }
 
-        public static unsafe byte[] ReadTerminated(IntPtr memory) {
+        internal static unsafe byte[] ReadTerminated(IntPtr memory) {
             var buf = new List<byte>();
 
             var ptr = (byte*) memory;
@@ -21,6 +22,10 @@ namespace XivCommon {
             }
 
             return buf.ToArray();
+        }
+
+        internal static void PrintMissingSig(string name) {
+            PluginLog.LogWarning($"Could not find signature for {name}. This functionality will be disabled.");
         }
     }
 }

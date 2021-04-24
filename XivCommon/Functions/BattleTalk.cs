@@ -10,6 +10,10 @@ namespace XivCommon.Functions {
     /// The class containing BattleTalk functionality
     /// </summary>
     public class BattleTalk : IDisposable {
+        private static class Signatures {
+            internal const string AddBattleTalk = "48 89 5C 24 ?? 57 48 83 EC 50 48 8B 01 49 8B D8 0F 29 74 24 ?? 48 8B FA 0F 28 F3 FF 50 40 C7 44 24 ?? ?? ?? ?? ??";
+        }
+
         private GameFunctions Functions { get; }
         private SeStringManager SeStringManager { get; }
         private bool HookEnabled { get; }
@@ -31,7 +35,7 @@ namespace XivCommon.Functions {
 
         private delegate byte AddBattleTalkDelegate(IntPtr uiModule, IntPtr sender, IntPtr message, float duration, byte style);
 
-        private AddBattleTalkDelegate AddBattleTalk { get; }
+        private AddBattleTalkDelegate? AddBattleTalk { get; }
         private Hook<AddBattleTalkDelegate>? AddBattleTalkHook { get; }
 
         internal BattleTalk(GameFunctions functions, SigScanner scanner, SeStringManager seStringManager, bool hook) {
@@ -39,15 +43,14 @@ namespace XivCommon.Functions {
             this.SeStringManager = seStringManager;
             this.HookEnabled = hook;
 
-            var addBattleTalkPtr = scanner.ScanText("48 89 5C 24 ?? 57 48 83 EC 50 48 8B 01 49 8B D8 0F 29 74 24 ?? 48 8B FA 0F 28 F3 FF 50 40 C7 44 24 ?? ?? ?? ?? ??");
-            this.AddBattleTalk = Marshal.GetDelegateForFunctionPointer<AddBattleTalkDelegate>(addBattleTalkPtr);
+            if (scanner.ScanTextSafe(Signatures.AddBattleTalk, out var addBattleTalkPtr, "battle talk")) {
+                this.AddBattleTalk = Marshal.GetDelegateForFunctionPointer<AddBattleTalkDelegate>(addBattleTalkPtr);
 
-            if (!this.HookEnabled) {
-                return;
+                if (this.HookEnabled) {
+                    this.AddBattleTalkHook = new Hook<AddBattleTalkDelegate>(addBattleTalkPtr, new AddBattleTalkDelegate(this.AddBattleTalkDetour));
+                    this.AddBattleTalkHook.Enable();
+                }
             }
-
-            this.AddBattleTalkHook = new Hook<AddBattleTalkDelegate>(addBattleTalkPtr, new AddBattleTalkDelegate(this.AddBattleTalkDetour));
-            this.AddBattleTalkHook.Enable();
         }
 
         /// <inheritdoc />
@@ -108,6 +111,7 @@ namespace XivCommon.Functions {
         /// <param name="message">The message to show in the window</param>
         /// <param name="options">Optional options for the window</param>
         /// <exception cref="ArgumentException">If sender or message are empty</exception>
+        /// <exception cref="InvalidOperationException">If the signature for this function could not be found</exception>
         public void Show(SeString sender, SeString message, BattleTalkOptions? options = null) {
             this.Show(sender.Encode(), message.Encode(), options);
         }
@@ -119,6 +123,10 @@ namespace XivCommon.Functions {
 
             if (message.Length == 0) {
                 throw new ArgumentException("message cannot be empty", nameof(message));
+            }
+
+            if (this.AddBattleTalk == null) {
+                throw new InvalidOperationException("Signature for battle talk could not be found");
             }
 
             options ??= new BattleTalkOptions();

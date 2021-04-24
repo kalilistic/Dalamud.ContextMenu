@@ -11,6 +11,11 @@ namespace XivCommon.Functions {
     /// Class containing chat bubble events and functions
     /// </summary>
     public class ChatBubbles : IDisposable {
+        private static class Signatures {
+            internal const string ChatBubbleOpen = "E8 ?? ?? ?? ?? 80 BF ?? ?? ?? ?? ?? C7 07 ?? ?? ?? ??";
+            internal const string ChatBubbleUpdate = "48 85 D2 0F 84 ?? ?? ?? ?? 48 89 5C 24 ?? 57 48 83 EC 20 8B 41 0C";
+        }
+
         private Dalamud.Dalamud Dalamud { get; }
         private SeStringManager SeStringManager { get; }
 
@@ -60,16 +65,18 @@ namespace XivCommon.Functions {
                 return;
             }
 
-            var openPtr = scanner.ScanText("E8 ?? ?? ?? ?? 80 BF ?? ?? ?? ?? ?? C7 07 ?? ?? ?? ??");
-            this.OpenChatBubbleHook = new Hook<OpenChatBubbleDelegate>(openPtr, new OpenChatBubbleDelegate(this.OpenChatBubbleDetour));
-            this.OpenChatBubbleHook.Enable();
-
-            var updatePtr = scanner.ScanText("48 85 D2 0F 84 ?? ?? ?? ?? 48 89 5C 24 ?? 57 48 83 EC 20 8B 41 0C");
-            unsafe {
-                this.UpdateChatBubbleHook = new Hook<UpdateChatBubbleDelegate>(updatePtr + 9, new UpdateChatBubbleDelegate(this.UpdateChatBubbleDetour));
+            if (scanner.ScanTextSafe(Signatures.ChatBubbleOpen, out var openPtr, "chat bubbles open")) {
+                this.OpenChatBubbleHook = new Hook<OpenChatBubbleDelegate>(openPtr, new OpenChatBubbleDelegate(this.OpenChatBubbleDetour));
+                this.OpenChatBubbleHook.Enable();
             }
 
-            this.UpdateChatBubbleHook.Enable();
+            if (scanner.ScanTextSafe(Signatures.ChatBubbleUpdate, out var updatePtr, "chat bubbles update")) {
+                unsafe {
+                    this.UpdateChatBubbleHook = new Hook<UpdateChatBubbleDelegate>(updatePtr + 9, new UpdateChatBubbleDelegate(this.UpdateChatBubbleDetour));
+                }
+
+                this.UpdateChatBubbleHook.Enable();
+            }
         }
 
         /// <inheritdoc />

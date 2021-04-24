@@ -12,11 +12,16 @@ namespace XivCommon.Functions {
     /// A class containing Party Finder functionality
     /// </summary>
     public class PartyFinder : IDisposable {
+        private static class Signatures {
+            internal const string RequestListings = "48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC 40 0F 10 81 ?? ?? ?? ??";
+            internal const string JoinCrossParty = "E8 ?? ?? ?? ?? 0F B7 47 28";
+        }
+
         private delegate byte RequestPartyFinderListingsDelegate(IntPtr agent, byte categoryIdx);
 
         private delegate IntPtr JoinPfDelegate(IntPtr manager, IntPtr a2, int type, IntPtr packetData, uint a5);
 
-        private RequestPartyFinderListingsDelegate RequestPartyFinderListings { get; }
+        private RequestPartyFinderListingsDelegate? RequestPartyFinderListings { get; }
         private Hook<RequestPartyFinderListingsDelegate>? RequestPfListingsHook { get; }
         private Hook<JoinPfDelegate>? JoinPfHook { get; }
 
@@ -48,21 +53,22 @@ namespace XivCommon.Functions {
             this.ListingsEnabled = hooks.HasFlag(Hooks.PartyFinderListings);
             this.JoinsEnabled = hooks.HasFlag(Hooks.PartyFinderJoins);
 
-            var requestPfPtr = scanner.ScanText("48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC 40 0F 10 81 ?? ?? ?? ??");
+            if (scanner.ScanTextSafe(Signatures.RequestListings, out var requestPfPtr, "Party Finder listings")) {
+                this.RequestPartyFinderListings = Marshal.GetDelegateForFunctionPointer<RequestPartyFinderListingsDelegate>(requestPfPtr);
 
-            this.RequestPartyFinderListings = Marshal.GetDelegateForFunctionPointer<RequestPartyFinderListingsDelegate>(requestPfPtr);
-
-            if (this.ListingsEnabled) {
-                this.RequestPfListingsHook = new Hook<RequestPartyFinderListingsDelegate>(requestPfPtr, new RequestPartyFinderListingsDelegate(this.OnRequestPartyFinderListings));
-                this.RequestPfListingsHook.Enable();
+                if (this.ListingsEnabled) {
+                    this.RequestPfListingsHook = new Hook<RequestPartyFinderListingsDelegate>(requestPfPtr, new RequestPartyFinderListingsDelegate(this.OnRequestPartyFinderListings));
+                    this.RequestPfListingsHook.Enable();
+                }
             }
 
             if (this.JoinsEnabled) {
-                var joinPtr = scanner.ScanText("E8 ?? ?? ?? ?? 0F B7 47 28");
-                this.JoinPfHook = new Hook<JoinPfDelegate>(joinPtr, new JoinPfDelegate(this.JoinPfDetour));
-                this.JoinPfHook.Enable();
+                if (scanner.ScanTextSafe(Signatures.JoinCrossParty, out var joinPtr, "Party Finder joins")) {
+                    this.JoinPfHook = new Hook<JoinPfDelegate>(joinPtr, new JoinPfDelegate(this.JoinPfDetour));
+                    this.JoinPfHook.Enable();
 
-                this.PartyFinderGui.ReceiveListing += this.ReceiveListing;
+                    this.PartyFinderGui.ReceiveListing += this.ReceiveListing;
+                }
             }
         }
 
@@ -121,8 +127,12 @@ namespace XivCommon.Functions {
         /// This maintains the currently selected category.
         /// </para>
         /// </summary>
-        /// <exception cref="InvalidOperationException">If the <see cref="Hooks.PartyFinderListings"/> hook is not enabled</exception>
+        /// <exception cref="InvalidOperationException">If the <see cref="Hooks.PartyFinderListings"/> hook is not enabled or if the signature for this function could not be found</exception>
         public void RefreshListings() {
+            if (this.RequestPartyFinderListings == null) {
+                throw new InvalidOperationException("Could not find signature for Party Finder listings");
+            }
+
             if (!this.ListingsEnabled) {
                 throw new InvalidOperationException("PartyFinder hooks are not enabled");
             }

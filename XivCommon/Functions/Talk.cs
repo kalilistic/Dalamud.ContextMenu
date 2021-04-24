@@ -10,6 +10,11 @@ namespace XivCommon.Functions {
     /// Class containing Talk events
     /// </summary>
     public class Talk : IDisposable {
+        private static class Signatures {
+            internal const string SetAtkValue = "E8 ?? ?? ?? ?? 41 03 ED";
+            internal const string ShowMessageBox = "4C 8B DC 55 57 41 55 49 8D 6B 98";
+        }
+
         // Updated: 5.5
         private const int TextOffset = 0;
         private const int NameOffset = 0x10;
@@ -23,7 +28,7 @@ namespace XivCommon.Functions {
 
         private delegate IntPtr SetAtkValueStringDelegate(IntPtr atkValue, IntPtr text);
 
-        private SetAtkValueStringDelegate SetAtkValueString { get; }
+        private SetAtkValueStringDelegate SetAtkValueString { get; } = null!;
 
         /// <summary>
         /// The delegate for Talk events.
@@ -43,16 +48,20 @@ namespace XivCommon.Functions {
         internal Talk(SigScanner scanner, SeStringManager manager, bool hooksEnabled) {
             this.SeStringManager = manager;
 
-            var setAtkPtr = scanner.ScanText("E8 ?? ?? ?? ?? 41 03 ED");
-            this.SetAtkValueString = Marshal.GetDelegateForFunctionPointer<SetAtkValueStringDelegate>(setAtkPtr);
+            if (scanner.ScanTextSafe(Signatures.SetAtkValue, out var setAtkPtr, "Talk - set atk value")) {
+                this.SetAtkValueString = Marshal.GetDelegateForFunctionPointer<SetAtkValueStringDelegate>(setAtkPtr);
+            } else {
+                return;
+            }
 
             if (!hooksEnabled) {
                 return;
             }
 
-            var showMessageBoxPtr = scanner.ScanText("4C 8B DC 55 57 41 55 49 8D 6B 98");
-            this.AddonTalkV45Hook = new Hook<AddonTalkV45Delegate>(showMessageBoxPtr, new AddonTalkV45Delegate(this.AddonTalkV45Detour));
-            this.AddonTalkV45Hook.Enable();
+            if (scanner.ScanTextSafe(Signatures.ShowMessageBox, out var showMessageBoxPtr, "Talk")) {
+                this.AddonTalkV45Hook = new Hook<AddonTalkV45Delegate>(showMessageBoxPtr, new AddonTalkV45Delegate(this.AddonTalkV45Detour));
+                this.AddonTalkV45Hook.Enable();
+            }
         }
 
         /// <inheritdoc />
