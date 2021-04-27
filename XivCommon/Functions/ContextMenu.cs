@@ -19,12 +19,13 @@ namespace XivCommon.Functions {
             internal const string ContextMenuSelected = "48 89 5C 24 ?? 55 57 41 56 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 44 24 ?? 80 B9 ?? ?? ?? ?? ??";
             internal const string AtkValueChangeType = "E8 ?? ?? ?? ?? 45 84 F6 48 8D 4C 24 ??";
             internal const string AtkValueSetString = "E8 ?? ?? ?? ?? 41 03 ED";
+            internal const string GetAddonByInternalId = "E8 ?? ?? ?? ?? 8B 6B 20";
         }
 
         /// <summary>
         /// Offset from addon to menu type
         /// </summary>
-        private const int MenuTypeOffset = 0x1D2;
+        private const int ParentAddonIdOffset = 0x1D2;
 
         /// <summary>
         /// Offset from agent to actions byte array pointer (have to add the actions offset after)
@@ -39,6 +40,10 @@ namespace XivCommon.Functions {
         private const int NoopContextId = 0x67;
 
         private unsafe delegate byte ContextMenuOpenDelegate(IntPtr addon, int menuSize, AtkValue* atkValueArgs);
+
+        private delegate IntPtr GetAddonByInternalIdDelegate(IntPtr raptureAtkUnitManager, short id);
+
+        private readonly GetAddonByInternalIdDelegate _getAddonByInternalId = null!;
 
         private Hook<ContextMenuOpenDelegate>? ContextMenuOpenHook { get; }
 
@@ -56,7 +61,7 @@ namespace XivCommon.Functions {
 
         private GameFunctions Functions { get; }
         private ClientLanguage Language { get; }
-        private Dictionary<ContextMenuType, List<ContextMenuItem>> Items { get; } = new();
+        private Dictionary<string, List<ContextMenuItem>> Items { get; } = new();
         private int NormalSize { get; set; }
 
         internal ContextMenu(GameFunctions functions, SigScanner scanner, ClientLanguage language) {
@@ -71,6 +76,12 @@ namespace XivCommon.Functions {
 
             if (scanner.TryScanText(Signatures.AtkValueSetString, out var setStringPtr, "Context Menu (set string)")) {
                 this._atkValueSetString = Marshal.GetDelegateForFunctionPointer<AtkValueSetStringDelegate>(setStringPtr);
+            } else {
+                return;
+            }
+
+            if (scanner.TryScanText(Signatures.GetAddonByInternalId, out var getAddonPtr, "Context Menu (get addon)")) {
+                this._getAddonByInternalId = Marshal.GetDelegateForFunctionPointer<GetAddonByInternalIdDelegate>(getAddonPtr);
             } else {
                 return;
             }
@@ -101,27 +112,31 @@ namespace XivCommon.Functions {
             return this.Functions.GetAgentByInternalId(9);
         }
 
+        private unsafe string GetParentAddonName(IntPtr addon) {
+            var parentAddonId = Marshal.ReadInt16(addon + ParentAddonIdOffset);
+            var stage = (AtkStage*) this.Functions.GetAtkStageSingleton();
+            var parentAddon = this._getAddonByInternalId((IntPtr) stage->RaptureAtkUnitManager, parentAddonId);
+            return Encoding.UTF8.GetString(Util.ReadTerminated(parentAddon + 8));
+        }
+
         private unsafe byte OpenMenuDetour(IntPtr addon, int menuSize, AtkValue* atkValueArgs) {
             this.NormalSize = menuSize - 7;
 
-            var menuType = Marshal.ReadInt16(addon + MenuTypeOffset);
+            var addonName = this.GetParentAddonName(addon);
+
             var agent = this.GetContextMenuAgent();
 
-            if (!this.Items.TryGetValue((ContextMenuType) menuType, out var registered)) {
+            if (!this.Items.TryGetValue(addonName, out var registered)) {
                 goto Original;
             }
 
             foreach (var item in registered) {
-                // increment the menu size
-                menuSize += 1;
-                (&atkValueArgs[0])->UInt += 1;
-
                 // set up the agent to ignore this item
                 var menuActions = (byte*) (Marshal.ReadIntPtr(agent + MenuActionsPointerOffset) + MenuActionsOffset);
-                *(menuActions + menuSize - 1) = NoopContextId;
+                *(menuActions + menuSize) = NoopContextId;
 
                 // set up the new menu item
-                var newItem = &atkValueArgs[menuSize - 1];
+                var newItem = &atkValueArgs[menuSize];
                 this._atkValueChangeType(newItem, ValueType.String);
                 var name = this.Language switch {
                     ClientLanguage.Japanese => item.NameJapanese,
@@ -134,18 +149,22 @@ namespace XivCommon.Functions {
                 fixed (byte* nameBytesPtr = nameBytes) {
                     this._atkValueSetString(newItem, nameBytesPtr);
                 }
+
+                // increment the menu size
+                menuSize += 1;
+                (&atkValueArgs[0])->UInt += 1;
             }
 
             Original:
             return this.ContextMenuOpenHook!.Original(addon, menuSize, atkValueArgs);
         }
 
-        private byte ItemSelectedDetour(IntPtr agent, int index, byte a3) {
-            var menuType = Marshal.ReadInt16(agent + MenuTypeOffset);
+        private byte ItemSelectedDetour(IntPtr addon, int index, byte a3) {
+            var addonName = this.GetParentAddonName(addon);
 
             // a custom item is being clicked
             if (index >= this.NormalSize) {
-                if (!this.Items.TryGetValue((ContextMenuType) menuType, out var registered)) {
+                if (!this.Items.TryGetValue(addonName, out var registered)) {
                     goto Original;
                 }
 
@@ -163,18 +182,18 @@ namespace XivCommon.Functions {
             }
 
             Original:
-            return this.ContextMenuItemSelectedHook!.Original(agent, index, a3);
+            return this.ContextMenuItemSelectedHook!.Original(addon, index, a3);
         }
 
         /// <summary>
         /// Register a menu item to appear in a context menu.
         /// </summary>
-        /// <param name="type">the context menu type to show the item in</param>
+        /// <param name="addon">the addon to show the item in</param>
         /// <param name="item">the item to be shown</param>
-        public void RegisterAction(ContextMenuType type, ContextMenuItem item) {
-            if (!this.Items.TryGetValue(type, out var registered)) {
-                this.Items[type] = new List<ContextMenuItem>();
-                registered = this.Items[type];
+        public void RegisterAction(string addon, ContextMenuItem item) {
+            if (!this.Items.TryGetValue(addon, out var registered)) {
+                this.Items[addon] = new List<ContextMenuItem>();
+                registered = this.Items[addon];
             }
 
             registered.Add(item);
@@ -183,34 +202,24 @@ namespace XivCommon.Functions {
         /// <summary>
         /// Remove a previously-registered context menu item.
         /// </summary>
-        /// <param name="type">the context menu type the item was registered under</param>
+        /// <param name="addon">the addon the item was registered under</param>
         /// <param name="item">the item to be removed</param>
-        public void UnregisterAction(ContextMenuType type, ContextMenuItem item) {
-            this.UnregisterAction(type, item.Id);
+        public void UnregisterAction(string addon, ContextMenuItem item) {
+            this.UnregisterAction(addon, item.Id);
         }
 
         /// <summary>
         /// Remove a previously-registered context menu item.
         /// </summary>
-        /// <param name="type">the context menu type the item was registered under</param>
+        /// <param name="addon">the addon the item was registered under</param>
         /// <param name="id">the id of the item to be removed</param>
-        public void UnregisterAction(ContextMenuType type, Guid id) {
-            if (!this.Items.TryGetValue(type, out var registered)) {
+        public void UnregisterAction(string addon, Guid id) {
+            if (!this.Items.TryGetValue(addon, out var registered)) {
                 return;
             }
 
             registered.RemoveAll(item => item.Id == id);
         }
-    }
-
-    /// <summary>
-    /// Context menu types
-    /// </summary>
-    public enum ContextMenuType : ushort {
-        /// <summary>
-        /// Context menu shown when right-clicking a Party Finder listing.
-        /// </summary>
-        PartyFinder = 0x76,
     }
 
     /// <summary>

@@ -10,6 +10,13 @@ namespace XivCommon {
     /// A class containing game functions
     /// </summary>
     public class GameFunctions : IDisposable {
+        private static class Signatures {
+            internal const string GetAgentByInternalId = "E8 ?? ?? ?? ?? 83 FF 0D";
+            internal const string GetAtkStageSingleton = "E8 ?? ?? ?? ?? 41 B8 01 00 00 00 48 8D 15 ?? ?? ?? ?? 48 8B 48 20 E8 ?? ?? ?? ?? 48 8B CF";
+        }
+
+        private delegate IntPtr GetAtkStageSingletonDelegate();
+
         private delegate IntPtr GetAgentModuleDelegate(IntPtr basePtr);
 
         private delegate IntPtr GetAgentByInternalIdDelegate(IntPtr agentModule, uint id);
@@ -17,6 +24,8 @@ namespace XivCommon {
         private DalamudPluginInterface Interface { get; }
 
         private GetAgentByInternalIdDelegate? GetAgentByInternalIdInternal { get; }
+
+        private GetAtkStageSingletonDelegate? GetAtkStageSingletonInternal { get; }
 
         /// <summary>
         /// Chat functions
@@ -70,8 +79,12 @@ namespace XivCommon {
             this.ChatBubbles = new ChatBubbles(dalamud, scanner, seStringManager, hooks.HasFlag(Hooks.ChatBubbles));
             this.ContextMenu = new ContextMenu(this, scanner, @interface.ClientState.ClientLanguage);
 
-            if (scanner.TryScanText("E8 ?? ?? ?? ?? 83 FF 0D", out var byInternalIdPtr, "GetAgentByInternalId")) {
+            if (scanner.TryScanText(Signatures.GetAgentByInternalId, out var byInternalIdPtr, "GetAgentByInternalId")) {
                 this.GetAgentByInternalIdInternal = Marshal.GetDelegateForFunctionPointer<GetAgentByInternalIdDelegate>(byInternalIdPtr);
+            }
+
+            if (scanner.TryScanText(Signatures.GetAtkStageSingleton, out var getSingletonPtr, "GetAtkStageSingleton")) {
+                this.GetAtkStageSingletonInternal = Marshal.GetDelegateForFunctionPointer<GetAtkStageSingletonDelegate>(getSingletonPtr);
             }
         }
 
@@ -127,6 +140,19 @@ namespace XivCommon {
 
             var agent = this.GetAgentModule();
             return this.GetAgentByInternalIdInternal(agent, id);
+        }
+
+        /// <summary>
+        /// Gets the pointer to the AtkStage singleton
+        /// </summary>
+        /// <returns>Pointer</returns>
+        /// <exception cref="InvalidOperationException">if the signature for the function could not be found</exception>
+        public IntPtr GetAtkStageSingleton() {
+            if (this.GetAtkStageSingletonInternal == null) {
+                throw new InvalidOperationException("Could not find signature for GetAtkStageSingleton");
+            }
+
+            return this.GetAtkStageSingletonInternal();
         }
     }
 }
