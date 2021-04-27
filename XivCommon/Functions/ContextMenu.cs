@@ -50,6 +50,14 @@ namespace XivCommon.Functions {
         /// </summary>
         public delegate void ContextMenuEventDelegate(ContextMenuArgs args);
 
+        /// <summary>
+        /// <para>
+        /// The event that is fired when a context menu is being prepared for opening.
+        /// </para>
+        /// <para>
+        /// Requires the <see cref="Hooks.ContextMenu"/> hook to be enabled.
+        /// </para>
+        /// </summary>
         public event ContextMenuEventDelegate? OpenContextMenu;
 
         /// <summary>
