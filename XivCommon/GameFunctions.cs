@@ -40,6 +40,11 @@ namespace XivCommon {
         /// </summary>
         public ChatBubbles ChatBubbles { get; }
 
+        /// <summary>
+        /// Context menu functions
+        /// </summary>
+        public ContextMenu ContextMenu { get; }
+
         internal GameFunctions(Hooks hooks, DalamudPluginInterface @interface) {
             this.Interface = @interface;
 
@@ -55,10 +60,12 @@ namespace XivCommon {
             this.Examine = new Examine(this, scanner);
             this.Talk = new Talk(scanner, seStringManager, hooks.HasFlag(Hooks.Talk));
             this.ChatBubbles = new ChatBubbles(dalamud, scanner, seStringManager, hooks.HasFlag(Hooks.ChatBubbles));
+            this.ContextMenu = new ContextMenu(scanner, @interface.ClientState.ClientLanguage);
         }
 
         /// <inheritdoc />
         public void Dispose() {
+            this.ContextMenu.Dispose();
             this.ChatBubbles.Dispose();
             this.Talk.Dispose();
             this.BattleTalk.Dispose();
