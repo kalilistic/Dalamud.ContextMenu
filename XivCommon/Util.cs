@@ -13,6 +13,10 @@ namespace XivCommon {
         }
 
         internal static unsafe byte[] ReadTerminated(IntPtr memory) {
+            if (memory == IntPtr.Zero) {
+                return new byte[0];
+            }
+
             var buf = new List<byte>();
 
             var ptr = (byte*) memory;
