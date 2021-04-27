@@ -112,8 +112,12 @@ namespace XivCommon.Functions {
             return this.Functions.GetAgentByInternalId(9);
         }
 
-        private unsafe string GetParentAddonName(IntPtr addon) {
+        private unsafe string? GetParentAddonName(IntPtr addon) {
             var parentAddonId = Marshal.ReadInt16(addon + ParentAddonIdOffset);
+            if (parentAddonId == 0) {
+                return null;
+            }
+
             var stage = (AtkStage*) this.Functions.GetAtkStageSingleton();
             var parentAddon = this._getAddonByInternalId((IntPtr) stage->RaptureAtkUnitManager, parentAddonId);
             return Encoding.UTF8.GetString(Util.ReadTerminated(parentAddon + 8));
@@ -123,6 +127,9 @@ namespace XivCommon.Functions {
             this.NormalSize = menuSize - 7;
 
             var addonName = this.GetParentAddonName(addon);
+            if (addonName == null) {
+                goto Original;
+            }
 
             var agent = this.GetContextMenuAgent();
 
@@ -161,6 +168,9 @@ namespace XivCommon.Functions {
 
         private byte ItemSelectedDetour(IntPtr addon, int index, byte a3) {
             var addonName = this.GetParentAddonName(addon);
+            if (addonName == null) {
+                goto Original;
+            }
 
             // a custom item is being clicked
             if (index >= this.NormalSize) {
