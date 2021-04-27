@@ -50,6 +50,13 @@ namespace XivCommon {
         /// This hook is used in order to enable the chat bubbles events.
         /// </summary>
         ChatBubbles,
+
+        /// <summary>
+        /// The context menu hooks.
+        ///
+        /// This hook is used in order to enable context menu functions.
+        /// </summary>
+        ContextMenu,
     }
 
     internal static class HooksExt {

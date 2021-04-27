@@ -72,9 +72,13 @@ namespace XivCommon.Functions {
         private Dictionary<string, List<ContextMenuItem>> Items { get; } = new();
         private int NormalSize { get; set; }
 
-        internal ContextMenu(GameFunctions functions, SigScanner scanner, ClientLanguage language) {
+        internal ContextMenu(GameFunctions functions, SigScanner scanner, ClientLanguage language, Hooks hooks) {
             this.Functions = functions;
             this.Language = language;
+
+            if (!hooks.HasFlag(Hooks.ContextMenu)) {
+                return;
+            }
 
             if (scanner.TryScanText(Signatures.AtkValueChangeType, out var changeTypePtr, "Context Menu (change type)")) {
                 this._atkValueChangeType = Marshal.GetDelegateForFunctionPointer<AtkValueChangeTypeDelegate>(changeTypePtr);
