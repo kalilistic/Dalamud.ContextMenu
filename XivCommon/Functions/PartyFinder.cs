@@ -47,6 +47,19 @@ namespace XivCommon.Functions {
         private Dictionary<uint, PartyFinderListing> Listings { get; } = new();
         private int LastBatch { get; set; } = -1;
 
+        /// <summary>
+        /// <para>
+        /// The current Party Finder listings that have been displayed.
+        /// </para>
+        /// <para>
+        /// This dictionary is cleared and updated each time the Party Finder is requested, and it only contains the category selected in the Party Finder addon.
+        /// </para>
+        /// <para>
+        /// Keys are the listing ID for fast lookup by ID. Values are the listing itself.
+        /// </para>
+        /// </summary>
+        public IReadOnlyDictionary<uint, PartyFinderListing> CurrentListings => this.Listings;
+
         internal PartyFinder(SigScanner scanner, PartyFinderGui partyFinderGui, Hooks hooks) {
             this.PartyFinderGui = partyFinderGui;
 
