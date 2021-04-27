@@ -21,31 +21,46 @@ namespace XivCommon.Functions {
             internal const string AtkValueSetString = "E8 ?? ?? ?? ?? 41 03 ED";
         }
 
+        /// <summary>
+        /// Offset from addon to menu type
+        /// </summary>
         private const int MenuTypeOffset = 0x1D2;
-        private const int MenuActionsOffset = 0x42F;
+
+        /// <summary>
+        /// Offset from agent to actions byte array pointer (have to add the actions offset after)
+        /// </summary>
+        private const int MenuActionsPointerOffset = 0xD18;
+
+        /// <summary>
+        /// Offset from agent to actions byte array
+        /// </summary>
+        private const int MenuActionsOffset = 0x428;
+
         private const int NoopContextId = 0x67;
 
-        private unsafe delegate byte ContextMenuOpenDelegate(IntPtr agent, int menuSize, AtkValue* atkValueArgs);
+        private unsafe delegate byte ContextMenuOpenDelegate(IntPtr addon, int menuSize, AtkValue* atkValueArgs);
 
         private Hook<ContextMenuOpenDelegate>? ContextMenuOpenHook { get; }
 
-        private delegate byte ContextMenuItemSelectedDelegate(IntPtr agent, int index, byte a3);
+        private delegate byte ContextMenuItemSelectedDelegate(IntPtr addon, int index, byte a3);
 
         private Hook<ContextMenuItemSelectedDelegate>? ContextMenuItemSelectedHook { get; }
 
         private unsafe delegate void AtkValueChangeTypeDelegate(AtkValue* thisPtr, ValueType type);
 
-        private readonly AtkValueChangeTypeDelegate _atkValueChangeType;
+        private readonly AtkValueChangeTypeDelegate _atkValueChangeType = null!;
 
         private unsafe delegate void AtkValueSetStringDelegate(AtkValue* thisPtr, byte* bytes);
 
-        private readonly AtkValueSetStringDelegate _atkValueSetString;
+        private readonly AtkValueSetStringDelegate _atkValueSetString = null!;
 
+        private GameFunctions Functions { get; }
         private ClientLanguage Language { get; }
         private Dictionary<ContextMenuType, List<ContextMenuItem>> Items { get; } = new();
         private int NormalSize { get; set; }
 
-        internal ContextMenu(SigScanner scanner, ClientLanguage language) {
+        internal ContextMenu(GameFunctions functions, SigScanner scanner, ClientLanguage language) {
+            this.Functions = functions;
             this.Language = language;
 
             if (scanner.TryScanText(Signatures.AtkValueChangeType, out var changeTypePtr, "Context Menu (change type)")) {
@@ -82,10 +97,15 @@ namespace XivCommon.Functions {
             this.ContextMenuItemSelectedHook?.Dispose();
         }
 
-        private unsafe byte OpenMenuDetour(IntPtr agent, int menuSize, AtkValue* atkValueArgs) {
+        private IntPtr GetContextMenuAgent() {
+            return this.Functions.GetAgentByInternalId(9);
+        }
+
+        private unsafe byte OpenMenuDetour(IntPtr addon, int menuSize, AtkValue* atkValueArgs) {
             this.NormalSize = menuSize - 7;
 
-            var menuType = Marshal.ReadInt16(agent + MenuTypeOffset);
+            var menuType = Marshal.ReadInt16(addon + MenuTypeOffset);
+            var agent = this.GetContextMenuAgent();
 
             if (!this.Items.TryGetValue((ContextMenuType) menuType, out var registered)) {
                 goto Original;
@@ -97,7 +117,8 @@ namespace XivCommon.Functions {
                 (&atkValueArgs[0])->UInt += 1;
 
                 // set up the agent to ignore this item
-                Marshal.WriteByte(agent + MenuActionsOffset + menuSize - 7, NoopContextId);
+                var menuActions = (byte*) (Marshal.ReadIntPtr(agent + MenuActionsPointerOffset) + MenuActionsOffset);
+                *(menuActions + menuSize - 1) = NoopContextId;
 
                 // set up the new menu item
                 var newItem = &atkValueArgs[menuSize - 1];
@@ -116,7 +137,7 @@ namespace XivCommon.Functions {
             }
 
             Original:
-            return this.ContextMenuOpenHook!.Original(agent, menuSize, atkValueArgs);
+            return this.ContextMenuOpenHook!.Original(addon, menuSize, atkValueArgs);
         }
 
         private byte ItemSelectedDetour(IntPtr agent, int index, byte a3) {
@@ -189,7 +210,7 @@ namespace XivCommon.Functions {
         /// <summary>
         /// Context menu shown when right-clicking a Party Finder listing.
         /// </summary>
-        PartyFinder = 0x72,
+        PartyFinder = 0x76,
     }
 
     /// <summary>
@@ -205,14 +226,17 @@ namespace XivCommon.Functions {
         /// The name of the context item to be shown for English clients.
         /// </summary>
         public string NameEnglish { get; }
+
         /// <summary>
         /// The name of the context item to be shown for Japanese clients.
         /// </summary>
         public string NameJapanese { get; }
+
         /// <summary>
         /// The name of the context item to be shown for French clients.
         /// </summary>
         public string NameFrench { get; }
+
         /// <summary>
         /// The name of the context item to be shown for German clients.
         /// </summary>

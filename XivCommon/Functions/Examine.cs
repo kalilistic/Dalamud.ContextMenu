@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Dalamud.Game;
 using Dalamud.Game.ClientState.Actors.Types;
@@ -15,8 +14,6 @@ namespace XivCommon.Functions {
 
         private GameFunctions Functions { get; }
 
-        private delegate IntPtr GetAgentModuleDelegate(IntPtr basePtr);
-
         private delegate long RequestCharInfoDelegate(IntPtr ptr);
 
         private RequestCharInfoDelegate? RequestCharacterInfo { get; }
@@ -28,17 +25,6 @@ namespace XivCommon.Functions {
             if (scanner.TryScanText(Signatures.RequestCharacterInfo, out var rciPtr, "Examine")) {
                 this.RequestCharacterInfo = Marshal.GetDelegateForFunctionPointer<RequestCharInfoDelegate>(rciPtr);
             }
-        }
-
-        private static IntPtr FollowPtrChain(IntPtr start, IEnumerable<int> offsets) {
-            foreach (var offset in offsets) {
-                start = Marshal.ReadIntPtr(start, offset);
-                if (start == IntPtr.Zero) {
-                    break;
-                }
-            }
-
-            return start;
         }
 
         /// <summary>
@@ -65,10 +51,7 @@ namespace XivCommon.Functions {
             // offsets and stuff come from the beginning of case 0x2c (around line 621 in IDA)
             // if 29f8 ever changes, I'd just scan for it in old binary and find what it is in the new binary at the same spot
             // 40 55 53 57 41 54 41 55 41 56 48 8D 6C 24 ??
-            var uiModule = this.Functions.GetUiModule();
-            var getAgentModulePtr = FollowPtrChain(uiModule, new[] {0, 0x110});
-            var getAgentModule = Marshal.GetDelegateForFunctionPointer<GetAgentModuleDelegate>(getAgentModulePtr);
-            var agentModule = getAgentModule(uiModule);
+            var agentModule = this.Functions.GetAgentModule();
             var rciData = Marshal.ReadIntPtr(agentModule + 0x1A0);
 
             unsafe {
