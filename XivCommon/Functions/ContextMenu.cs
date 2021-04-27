@@ -37,7 +37,15 @@ namespace XivCommon.Functions {
         /// </summary>
         private const int MenuActionsOffset = 0x428;
 
+        private const int ActorIdOffset = 0xEF0;
+        private const int ContentIdLowerOffset = 0xEE0;
+
         private const int NoopContextId = 0x67;
+
+        /// <summary>
+        /// The delegate that is run when a context menu item is selected.
+        /// </summary>
+        public delegate void ContextMenuItemSelectedDelegate(IntPtr addon, IntPtr agent, ContextMenuItemSelectedArgs args);
 
         private unsafe delegate byte ContextMenuOpenDelegate(IntPtr addon, int menuSize, AtkValue* atkValueArgs);
 
@@ -47,9 +55,9 @@ namespace XivCommon.Functions {
 
         private Hook<ContextMenuOpenDelegate>? ContextMenuOpenHook { get; }
 
-        private delegate byte ContextMenuItemSelectedDelegate(IntPtr addon, int index, byte a3);
+        private delegate byte ContextMenuItemSelectedInternalDelegate(IntPtr addon, int index, byte a3);
 
-        private Hook<ContextMenuItemSelectedDelegate>? ContextMenuItemSelectedHook { get; }
+        private Hook<ContextMenuItemSelectedInternalDelegate>? ContextMenuItemSelectedHook { get; }
 
         private unsafe delegate void AtkValueChangeTypeDelegate(AtkValue* thisPtr, ValueType type);
 
@@ -97,7 +105,7 @@ namespace XivCommon.Functions {
             }
 
             if (scanner.TryScanText(Signatures.ContextMenuSelected, out var selectedPtr, "Context Menu selected")) {
-                this.ContextMenuItemSelectedHook = new Hook<ContextMenuItemSelectedDelegate>(selectedPtr, new ContextMenuItemSelectedDelegate(this.ItemSelectedDetour));
+                this.ContextMenuItemSelectedHook = new Hook<ContextMenuItemSelectedInternalDelegate>(selectedPtr, new ContextMenuItemSelectedInternalDelegate(this.ItemSelectedDetour));
                 this.ContextMenuItemSelectedHook.Enable();
             }
         }
@@ -166,7 +174,7 @@ namespace XivCommon.Functions {
             return this.ContextMenuOpenHook!.Original(addon, menuSize, atkValueArgs);
         }
 
-        private byte ItemSelectedDetour(IntPtr addon, int index, byte a3) {
+        private unsafe byte ItemSelectedDetour(IntPtr addon, int index, byte a3) {
             var addonName = this.GetParentAddonName(addon);
             if (addonName == null) {
                 goto Original;
@@ -183,9 +191,13 @@ namespace XivCommon.Functions {
                     goto Original;
                 }
 
+                var agent = this.GetContextMenuAgent();
+                var actorId = *(uint*) (agent + ActorIdOffset);
+                var contentIdLower = *(uint*) (agent + ContentIdLowerOffset);
+
                 var item = registered[idx];
                 try {
-                    item.Action();
+                    item.Action(addon, agent, new ContextMenuItemSelectedArgs(actorId, contentIdLower));
                 } catch (Exception ex) {
                     PluginLog.LogError(ex, "Exception in custom context menu item");
                 }
@@ -264,20 +276,40 @@ namespace XivCommon.Functions {
         /// <summary>
         /// The action to perform when this item is clicked.
         /// </summary>
-        public Action Action { get; }
+        public ContextMenu.ContextMenuItemSelectedDelegate Action { get; }
 
         /// <summary>
         /// Create a new context menu item.
         /// </summary>
         /// <param name="name">the English name of the item, copied to other languages</param>
         /// <param name="action">the action to perform on click</param>
-        public ContextMenuItem(string name, Action action) {
+        public ContextMenuItem(string name, ContextMenu.ContextMenuItemSelectedDelegate action) {
             this.NameEnglish = name;
             this.NameJapanese = name;
             this.NameFrench = name;
             this.NameGerman = name;
 
             this.Action = action;
+        }
+    }
+
+    /// <summary>
+    /// Arguments for the context menu item selected delegate.
+    /// </summary>
+    public class ContextMenuItemSelectedArgs {
+        /// <summary>
+        /// The actor ID for this context menu. May be invalid (0xE0000000).
+        /// </summary>
+        public uint ActorId { get; }
+
+        /// <summary>
+        /// The lower half of the content ID of the actor for this context menu. May be zero.
+        /// </summary>
+        public uint ContentIdLower { get; }
+
+        internal ContextMenuItemSelectedArgs(uint actorId, uint contentIdLower) {
+            this.ContentIdLower = contentIdLower;
+            this.ActorId = actorId;
         }
     }
 }
