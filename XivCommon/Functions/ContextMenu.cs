@@ -40,12 +40,22 @@ namespace XivCommon.Functions {
         private const int ActorIdOffset = 0xEF0;
         private const int ContentIdLowerOffset = 0xEE0;
 
+        private const int TextPointerOffset = 0xE08;
+        private const int WorldOffset = 0xF00;
+
         private const int NoopContextId = 0x67;
+
+        /// <summary>
+        /// The delegate for context menu events.
+        /// </summary>
+        public delegate void ContextMenuEventDelegate(ContextMenuArgs args);
+
+        public event ContextMenuEventDelegate? OpenContextMenu;
 
         /// <summary>
         /// The delegate that is run when a context menu item is selected.
         /// </summary>
-        public delegate void ContextMenuItemSelectedDelegate(IntPtr addon, IntPtr agent, ContextMenuItemSelectedArgs args);
+        public delegate void ContextMenuItemSelectedDelegate(ContextMenuItemSelectedArgs args);
 
         private unsafe delegate byte ContextMenuOpenDelegate(IntPtr addon, int menuSize, AtkValue* atkValueArgs);
 
@@ -69,7 +79,7 @@ namespace XivCommon.Functions {
 
         private GameFunctions Functions { get; }
         private ClientLanguage Language { get; }
-        private Dictionary<string, List<ContextMenuItem>> Items { get; } = new();
+        private List<ContextMenuItem> Items { get; } = new();
         private int NormalSize { get; set; }
 
         internal ContextMenu(GameFunctions functions, SigScanner scanner, ClientLanguage language, Hooks hooks) {
@@ -135,27 +145,51 @@ namespace XivCommon.Functions {
             return Encoding.UTF8.GetString(Util.ReadTerminated(parentAddon + 8));
         }
 
+        private static unsafe (uint actorId, uint contentIdLower, string? text, ushort actorWorld) GetAgentInfo(IntPtr agent) {
+            var actorId = *(uint*) (agent + ActorIdOffset);
+            var contentIdLower = *(uint*) (agent + ContentIdLowerOffset);
+            var textBytes = Util.ReadTerminated(Marshal.ReadIntPtr(agent + TextPointerOffset));
+            var text = textBytes.Length == 0 ? null : Encoding.UTF8.GetString(textBytes);
+            var actorWorld = *(ushort*) (agent + WorldOffset);
+            return (actorId, contentIdLower, text, actorWorld);
+        }
+
         private unsafe byte OpenMenuDetour(IntPtr addon, int menuSize, AtkValue* atkValueArgs) {
-            this.NormalSize = menuSize - 7;
+            this.NormalSize = (int) (&atkValueArgs[0])->UInt;
 
             var addonName = this.GetParentAddonName(addon);
-            if (addonName == null) {
-                goto Original;
-            }
 
             var agent = this.GetContextMenuAgent();
+            var info = GetAgentInfo(agent);
+            this.Items.Clear();
 
-            if (!this.Items.TryGetValue(addonName, out var registered)) {
+            var args = new ContextMenuArgs(
+                addon,
+                agent,
+                addonName,
+                info.actorId,
+                info.contentIdLower,
+                info.text,
+                info.actorWorld
+            );
+            try {
+                this.OpenContextMenu?.Invoke(args);
+            } catch (Exception ex) {
+                PluginLog.LogError(ex, "Exception in OpenMenuDetour");
                 goto Original;
             }
 
-            foreach (var item in registered) {
+            this.Items.AddRange(args.AdditionalItems);
+
+            for (var i = 0; i < this.Items.Count; i++) {
+                var item = this.Items[i];
+
                 // set up the agent to ignore this item
                 var menuActions = (byte*) (Marshal.ReadIntPtr(agent + MenuActionsPointerOffset) + MenuActionsOffset);
-                *(menuActions + menuSize) = NoopContextId;
+                *(menuActions + 7 + this.NormalSize + i) = NoopContextId;
 
                 // set up the new menu item
-                var newItem = &atkValueArgs[menuSize];
+                var newItem = &atkValueArgs[7 + this.NormalSize + i];
                 this._atkValueChangeType(newItem, ValueType.String);
                 var name = this.Language switch {
                     ClientLanguage.Japanese => item.NameJapanese,
@@ -170,38 +204,39 @@ namespace XivCommon.Functions {
                 }
 
                 // increment the menu size
-                menuSize += 1;
                 (&atkValueArgs[0])->UInt += 1;
             }
+
+            menuSize = 7 + (int) (&atkValueArgs[0])->UInt;
 
             Original:
             return this.ContextMenuOpenHook!.Original(addon, menuSize, atkValueArgs);
         }
 
-        private unsafe byte ItemSelectedDetour(IntPtr addon, int index, byte a3) {
+        private byte ItemSelectedDetour(IntPtr addon, int index, byte a3) {
             var addonName = this.GetParentAddonName(addon);
-            if (addonName == null) {
-                goto Original;
-            }
 
             // a custom item is being clicked
             if (index >= this.NormalSize) {
-                if (!this.Items.TryGetValue(addonName, out var registered)) {
-                    goto Original;
-                }
-
                 var idx = index - this.NormalSize;
-                if (registered.Count <= idx) {
+                if (this.Items.Count <= idx) {
                     goto Original;
                 }
 
                 var agent = this.GetContextMenuAgent();
-                var actorId = *(uint*) (agent + ActorIdOffset);
-                var contentIdLower = *(uint*) (agent + ContentIdLowerOffset);
+                var info = GetAgentInfo(agent);
 
-                var item = registered[idx];
+                var item = this.Items[idx];
                 try {
-                    item.Action(addon, agent, new ContextMenuItemSelectedArgs(actorId, contentIdLower));
+                    item.Action(new ContextMenuItemSelectedArgs(
+                        addon,
+                        agent,
+                        addonName,
+                        info.actorId,
+                        info.contentIdLower,
+                        info.text,
+                        info.actorWorld
+                    ));
                 } catch (Exception ex) {
                     PluginLog.LogError(ex, "Exception in custom context menu item");
                 }
@@ -209,42 +244,6 @@ namespace XivCommon.Functions {
 
             Original:
             return this.ContextMenuItemSelectedHook!.Original(addon, index, a3);
-        }
-
-        /// <summary>
-        /// Register a menu item to appear in a context menu.
-        /// </summary>
-        /// <param name="addon">the addon to show the item in</param>
-        /// <param name="item">the item to be shown</param>
-        public void RegisterAction(string addon, ContextMenuItem item) {
-            if (!this.Items.TryGetValue(addon, out var registered)) {
-                this.Items[addon] = new List<ContextMenuItem>();
-                registered = this.Items[addon];
-            }
-
-            registered.Add(item);
-        }
-
-        /// <summary>
-        /// Remove a previously-registered context menu item.
-        /// </summary>
-        /// <param name="addon">the addon the item was registered under</param>
-        /// <param name="item">the item to be removed</param>
-        public void UnregisterAction(string addon, ContextMenuItem item) {
-            this.UnregisterAction(addon, item.Id);
-        }
-
-        /// <summary>
-        /// Remove a previously-registered context menu item.
-        /// </summary>
-        /// <param name="addon">the addon the item was registered under</param>
-        /// <param name="id">the id of the item to be removed</param>
-        public void UnregisterAction(string addon, Guid id) {
-            if (!this.Items.TryGetValue(addon, out var registered)) {
-                return;
-            }
-
-            registered.RemoveAll(item => item.Id == id);
         }
     }
 
@@ -302,6 +301,21 @@ namespace XivCommon.Functions {
     /// </summary>
     public class ContextMenuItemSelectedArgs {
         /// <summary>
+        /// Pointer to the context menu addon.
+        /// </summary>
+        public IntPtr Addon { get; }
+
+        /// <summary>
+        /// Pointer to the context menu agent.
+        /// </summary>
+        public IntPtr Agent { get; }
+
+        /// <summary>
+        /// The name of the addon containing this context menu, if any.
+        /// </summary>
+        public string? ParentAddonName { get; }
+
+        /// <summary>
         /// The actor ID for this context menu. May be invalid (0xE0000000).
         /// </summary>
         public uint ActorId { get; }
@@ -311,9 +325,79 @@ namespace XivCommon.Functions {
         /// </summary>
         public uint ContentIdLower { get; }
 
-        internal ContextMenuItemSelectedArgs(uint actorId, uint contentIdLower) {
+        /// <summary>
+        /// The text related to this context menu, usually an actor name.
+        /// </summary>
+        public string? Text { get; }
+
+        /// <summary>
+        /// The world of the actor this context menu is for, if any.
+        /// </summary>
+        public ushort ActorWorld { get; }
+
+        internal ContextMenuItemSelectedArgs(IntPtr addon, IntPtr agent, string? parentAddonName, uint actorId, uint contentIdLower, string? text, ushort actorWorld) {
+            this.Addon = addon;
+            this.Agent = agent;
+            this.ParentAddonName = parentAddonName;
             this.ContentIdLower = contentIdLower;
             this.ActorId = actorId;
+            this.Text = text;
+            this.ActorWorld = actorWorld;
+        }
+    }
+
+    /// <summary>
+    /// Arguments for the context menu event.
+    /// </summary>
+    public class ContextMenuArgs {
+        /// <summary>
+        /// Pointer to the context menu addon.
+        /// </summary>
+        public IntPtr Addon { get; }
+
+        /// <summary>
+        /// Pointer to the context menu agent.
+        /// </summary>
+        public IntPtr Agent { get; }
+
+        /// <summary>
+        /// The name of the addon containing this context menu, if any.
+        /// </summary>
+        public string? ParentAddonName { get; }
+
+        /// <summary>
+        /// The actor ID for this context menu. May be invalid (0xE0000000).
+        /// </summary>
+        public uint ActorId { get; }
+
+        /// <summary>
+        /// The lower half of the content ID of the actor for this context menu. May be zero.
+        /// </summary>
+        public uint ContentIdLower { get; }
+
+        /// <summary>
+        /// The text related to this context menu, usually an actor name.
+        /// </summary>
+        public string? Text { get; }
+
+        /// <summary>
+        /// The world of the actor this context menu is for, if any.
+        /// </summary>
+        public ushort ActorWorld { get; }
+
+        /// <summary>
+        /// Additional context menu items to add to this menu.
+        /// </summary>
+        public List<ContextMenuItem> AdditionalItems { get; } = new();
+
+        internal ContextMenuArgs(IntPtr addon, IntPtr agent, string? parentAddonName, uint actorId, uint contentIdLower, string? text, ushort actorWorld) {
+            this.Addon = addon;
+            this.Agent = agent;
+            this.ParentAddonName = parentAddonName;
+            this.ActorId = actorId;
+            this.ContentIdLower = contentIdLower;
+            this.Text = text;
+            this.ActorWorld = actorWorld;
         }
     }
 }
