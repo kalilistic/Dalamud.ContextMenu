@@ -256,27 +256,27 @@ namespace XivCommon.Functions {
         /// <summary>
         /// The name of the context item to be shown for English clients.
         /// </summary>
-        public string NameEnglish { get; }
+        public string NameEnglish { get; set; }
 
         /// <summary>
         /// The name of the context item to be shown for Japanese clients.
         /// </summary>
-        public string NameJapanese { get; }
+        public string NameJapanese { get; set; }
 
         /// <summary>
         /// The name of the context item to be shown for French clients.
         /// </summary>
-        public string NameFrench { get; }
+        public string NameFrench { get; set; }
 
         /// <summary>
         /// The name of the context item to be shown for German clients.
         /// </summary>
-        public string NameGerman { get; }
+        public string NameGerman { get; set; }
 
         /// <summary>
         /// The action to perform when this item is clicked.
         /// </summary>
-        public ContextMenu.ContextMenuItemSelectedDelegate Action { get; }
+        public ContextMenu.ContextMenuItemSelectedDelegate Action { get; set; }
 
         /// <summary>
         /// Create a new context menu item.
