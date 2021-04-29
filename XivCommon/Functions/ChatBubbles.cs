@@ -89,7 +89,7 @@ namespace XivCommon.Functions {
             try {
                 this.OpenChatBubbleDetourInner(manager, actor, text, a4);
             } catch (Exception ex) {
-                PluginLog.LogError(ex, "Exception in chat bubble detour");
+                Logger.LogError(ex, "Exception in chat bubble detour");
                 this.OpenChatBubbleHook!.Original(manager, actor, text, a4);
             }
         }
@@ -104,7 +104,7 @@ namespace XivCommon.Functions {
             try {
                 this.OnChatBubble?.Invoke(ref actor, ref text);
             } catch (Exception ex) {
-                PluginLog.LogError(ex, "Exception in chat bubble event");
+                Logger.LogError(ex, "Exception in chat bubble event");
             }
 
             var newText = text.Encode().Terminate();
@@ -120,7 +120,7 @@ namespace XivCommon.Functions {
             try {
                 this.UpdateChatBubbleDetourInner(bubble, actor, a3);
             } catch (Exception ex) {
-                PluginLog.LogError(ex, "Exception in update chat bubble detour");
+                Logger.LogError(ex, "Exception in update chat bubble detour");
                 this.UpdateChatBubbleHook!.Original(bubble, actor, a3);
             }
         }
@@ -132,7 +132,7 @@ namespace XivCommon.Functions {
             try {
                 this.OnUpdateBubble?.Invoke(ref actor);
             } catch (Exception ex) {
-                PluginLog.LogError(ex, "Exception in chat bubble update event");
+                Logger.LogError(ex, "Exception in chat bubble update event");
             }
 
             this.UpdateChatBubbleHook!.Original(bubble, actor.Address, a3);

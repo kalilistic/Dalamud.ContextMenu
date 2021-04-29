@@ -77,7 +77,7 @@ namespace XivCommon.Functions {
             try {
                 this.AddonTalkV45DetourInner(data);
             } catch (Exception ex) {
-                PluginLog.LogError(ex, "Exception in Talk detour");
+                Logger.LogError(ex, "Exception in Talk detour");
             }
 
             Return:
@@ -95,7 +95,7 @@ namespace XivCommon.Functions {
             try {
                 this.OnTalk?.Invoke(ref name, ref text, ref style);
             } catch (Exception ex) {
-                PluginLog.LogError(ex, "Exception in Talk event");
+                Logger.LogError(ex, "Exception in Talk event");
             }
 
             var newName = name.Encode().Terminate();

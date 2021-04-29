@@ -29,7 +29,7 @@ namespace XivCommon {
         }
 
         internal static void PrintMissingSig(string name) {
-            PluginLog.LogWarning($"Could not find signature for {name}. This functionality will be disabled.");
+            Logger.LogWarning($"Could not find signature for {name}. This functionality will be disabled.");
         }
     }
 }

@@ -121,7 +121,7 @@ namespace XivCommon.Functions {
                     this.JoinParty?.Invoke(listing);
                 }
             } catch (Exception ex) {
-                PluginLog.LogError(ex, "Exception in PF join detour");
+                Logger.LogError(ex, "Exception in PF join detour");
             }
 
             return ret;

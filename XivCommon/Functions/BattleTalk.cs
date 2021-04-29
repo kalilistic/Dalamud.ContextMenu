@@ -66,7 +66,7 @@ namespace XivCommon.Functions {
             try {
                 return this.AddBattleTalkDetourInner(uiModule, senderPtr, messagePtr, duration, style);
             } catch (Exception ex) {
-                PluginLog.LogError(ex, "Exception in BattleTalk detour");
+                Logger.LogError(ex, "Exception in BattleTalk detour");
             }
 
             Return:
@@ -89,7 +89,7 @@ namespace XivCommon.Functions {
             try {
                 this.OnBattleTalk?.Invoke(ref sender, ref message, ref options, ref handled);
             } catch (Exception ex) {
-                PluginLog.Log(ex, "Exception in BattleTalk event");
+                Logger.LogError(ex, "Exception in BattleTalk event");
             }
 
             if (handled) {
