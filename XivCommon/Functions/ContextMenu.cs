@@ -6,7 +6,6 @@ using System.Text;
 using Dalamud;
 using Dalamud.Game;
 using Dalamud.Hooking;
-using Dalamud.Plugin;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ValueType = FFXIVClientStructs.FFXIV.Component.GUI.ValueType;
 
@@ -236,7 +235,7 @@ namespace XivCommon.Functions {
 
                 // set up the agent to take the appropriate action for this item
                 *(menuActions + 7 + i) = item switch {
-                    NativeContextMenuItem => item.InternalAction,
+                    NativeContextMenuItem nativeItem => nativeItem.InternalAction,
                     _ => NoopContextId,
                 };
 
@@ -312,11 +311,6 @@ namespace XivCommon.Functions {
     /// </summary>
     public abstract class BaseContextMenuItem {
         /// <summary>
-        /// The action code to be used in the context menu agent for this item.
-        /// </summary>
-        public byte InternalAction { get; internal set; }
-
-        /// <summary>
         /// If this item should be enabled in the menu.
         /// </summary>
         public bool Enabled { get; set; } = true;
@@ -326,6 +320,11 @@ namespace XivCommon.Functions {
     /// A native context menu item
     /// </summary>
     public sealed class NativeContextMenuItem : BaseContextMenuItem {
+        /// <summary>
+        /// The action code to be used in the context menu agent for this item.
+        /// </summary>
+        public byte InternalAction { get; }
+
         /// <summary>
         /// The name of the context item.
         /// </summary>
