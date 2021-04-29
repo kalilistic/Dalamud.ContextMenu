@@ -90,7 +90,7 @@ namespace XivCommon.Functions {
 
         private GameFunctions Functions { get; }
         private ClientLanguage Language { get; }
-        private List<ContextMenuItem> Items { get; } = new();
+        private List<BaseContextMenuItem> Items { get; } = new();
         private int NormalSize { get; set; }
 
         internal ContextMenu(GameFunctions functions, SigScanner scanner, ClientLanguage language, Hooks hooks) {
@@ -176,6 +176,26 @@ namespace XivCommon.Functions {
             var info = GetAgentInfo(agent);
             this.Items.Clear();
 
+            var menuActions = (byte*) (Marshal.ReadIntPtr(agent + MenuActionsPointerOffset) + MenuActionsOffset);
+
+            var nativeItems = new List<NativeContextMenuItem>();
+            for (var i = 0; i < this.NormalSize; i++) {
+                var atkItem = &atkValueArgs[7 + i];
+
+                var nameBytes = Util.ReadTerminated((IntPtr) atkItem->String);
+                var name = Encoding.UTF8.GetString(nameBytes);
+
+                var enabled = true;
+                if (hasGameDisabled) {
+                    var disabledItem = &atkValueArgs[7 + this.NormalSize + i];
+                    enabled = disabledItem->Int == 0;
+                }
+
+                var action = *(menuActions + 7 + i);
+
+                nativeItems.Add(new NativeContextMenuItem(action, name, enabled));
+            }
+
             var args = new ContextMenuArgs(
                 addon,
                 agent,
@@ -185,6 +205,8 @@ namespace XivCommon.Functions {
                 info.text,
                 info.actorWorld
             );
+            args.Items.AddRange(nativeItems);
+
             try {
                 this.OpenContextMenu?.Invoke(args);
             } catch (Exception ex) {
@@ -192,12 +214,11 @@ namespace XivCommon.Functions {
                 goto Original;
             }
 
-            this.Items.AddRange(args.AdditionalItems);
+            this.Items.AddRange(args.Items);
 
-            if (this.NormalSize + this.Items.Count > MaxItems) {
-                var toKeep = MaxItems - this.NormalSize;
-                var toRemove = this.Items.Count - toKeep;
-                this.Items.RemoveRange(toKeep, toRemove);
+            if (this.Items.Count > MaxItems) {
+                var toRemove = this.Items.Count - MaxItems;
+                this.Items.RemoveRange(MaxItems, toRemove);
                 Logger.LogWarning($"Context menu item limit ({MaxItems}) exceeded. Removing {toRemove} item(s).");
             }
 
@@ -208,42 +229,39 @@ namespace XivCommon.Functions {
                 var item = this.Items[i];
 
                 if (hasAnyDisabled) {
-                    var disabledArg = &atkValueArgs[7 + this.NormalSize * 2 + i + 1];
+                    var disabledArg = &atkValueArgs[7 + this.Items.Count + i];
                     this._atkValueChangeType(disabledArg, ValueType.Int);
                     disabledArg->Int = item.Enabled ? 0 : 1;
                 }
 
-                // set up the agent to ignore this item
-                var menuActions = (byte*) (Marshal.ReadIntPtr(agent + MenuActionsPointerOffset) + MenuActionsOffset);
-                *(menuActions + 7 + this.NormalSize + i) = NoopContextId;
+                // set up the agent to take the appropriate action for this item
+                *(menuActions + 7 + i) = item switch {
+                    NativeContextMenuItem => item.InternalAction,
+                    _ => NoopContextId,
+                };
 
-                // set up the new menu item
-                var newItem = &atkValueArgs[7 + this.NormalSize + i];
+                // set up the menu item
+                var newItem = &atkValueArgs[7 + i];
                 this._atkValueChangeType(newItem, ValueType.String);
-                var name = this.Language switch {
-                    ClientLanguage.Japanese => item.NameJapanese,
-                    ClientLanguage.English => item.NameEnglish,
-                    ClientLanguage.German => item.NameGerman,
-                    ClientLanguage.French => item.NameFrench,
-                    _ => throw new ArgumentOutOfRangeException(),
+
+                var name = item switch {
+                    ContextMenuItem custom => this.Language switch {
+                        ClientLanguage.Japanese => custom.NameJapanese,
+                        ClientLanguage.English => custom.NameEnglish,
+                        ClientLanguage.German => custom.NameGerman,
+                        ClientLanguage.French => custom.NameFrench,
+                        _ => custom.NameEnglish,
+                    },
+                    NativeContextMenuItem native => native.Name,
+                    _ => "Invalid context menu item",
                 };
                 var nameBytes = Encoding.UTF8.GetBytes(name).Terminate();
                 fixed (byte* nameBytesPtr = nameBytes) {
                     this._atkValueSetString(newItem, nameBytesPtr);
                 }
-
-                // increment the menu size
-                (&atkValueArgs[0])->UInt += 1;
             }
 
-            // need to enable all the game items manually
-            if (!hasGameDisabled && hasCustomDisabled) {
-                for (var i = 0; i < this.NormalSize; i++) {
-                    var disabledArg = &atkValueArgs[7 + this.NormalSize + i + 1];
-                    this._atkValueChangeType(disabledArg, ValueType.Int);
-                    disabledArg->Int = 0;
-                }
-            }
+            (&atkValueArgs[0])->UInt = (uint) this.Items.Count;
 
             menuSize = (int) (&atkValueArgs[0])->UInt;
             if (hasAnyDisabled) {
@@ -257,21 +275,20 @@ namespace XivCommon.Functions {
         }
 
         private byte ItemSelectedDetour(IntPtr addon, int index, byte a3) {
+            if (index < 0 || index >= this.Items.Count) {
+                goto Original;
+            }
+
             var addonName = this.GetParentAddonName(addon);
 
+            var agent = this.GetContextMenuAgent();
+            var info = GetAgentInfo(agent);
+
+            var item = this.Items[index];
             // a custom item is being clicked
-            if (index >= this.NormalSize) {
-                var idx = index - this.NormalSize;
-                if (this.Items.Count <= idx) {
-                    goto Original;
-                }
-
-                var agent = this.GetContextMenuAgent();
-                var info = GetAgentInfo(agent);
-
-                var item = this.Items[idx];
+            if (item is ContextMenuItem custom) {
                 try {
-                    item.Action(new ContextMenuItemSelectedArgs(
+                    custom.Action(new ContextMenuItemSelectedArgs(
                         addon,
                         agent,
                         addonName,
@@ -291,9 +308,40 @@ namespace XivCommon.Functions {
     }
 
     /// <summary>
+    /// A base context menu item
+    /// </summary>
+    public abstract class BaseContextMenuItem {
+        /// <summary>
+        /// The action code to be used in the context menu agent for this item.
+        /// </summary>
+        public byte InternalAction { get; internal set; }
+
+        /// <summary>
+        /// If this item should be enabled in the menu.
+        /// </summary>
+        public bool Enabled { get; set; } = true;
+    }
+
+    /// <summary>
+    /// A native context menu item
+    /// </summary>
+    public sealed class NativeContextMenuItem : BaseContextMenuItem {
+        /// <summary>
+        /// The name of the context item.
+        /// </summary>
+        public string Name { get; set; }
+
+        internal NativeContextMenuItem(byte action, string name, bool enabled) {
+            this.Name = name;
+            this.InternalAction = action;
+            this.Enabled = enabled;
+        }
+    }
+
+    /// <summary>
     /// A custom context menu item
     /// </summary>
-    public class ContextMenuItem {
+    public class ContextMenuItem : BaseContextMenuItem {
         /// <summary>
         /// The name of the context item to be shown for English clients.
         /// </summary>
@@ -318,11 +366,6 @@ namespace XivCommon.Functions {
         /// The action to perform when this item is clicked.
         /// </summary>
         public ContextMenu.ContextMenuItemSelectedDelegate Action { get; set; }
-
-        /// <summary>
-        /// If this item should be enabled in the menu.
-        /// </summary>
-        public bool Enabled { get; set; } = true;
 
         /// <summary>
         /// Create a new context menu item.
@@ -429,9 +472,9 @@ namespace XivCommon.Functions {
         public ushort ActorWorld { get; }
 
         /// <summary>
-        /// Additional context menu items to add to this menu.
+        /// Context menu items in this menu.
         /// </summary>
-        public List<ContextMenuItem> AdditionalItems { get; } = new();
+        public List<BaseContextMenuItem> Items { get; } = new();
 
         internal ContextMenuArgs(IntPtr addon, IntPtr agent, string? parentAddonName, uint actorId, uint contentIdLower, string? text, ushort actorWorld) {
             this.Addon = addon;
