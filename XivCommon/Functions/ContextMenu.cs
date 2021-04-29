@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Dalamud;
@@ -165,6 +166,8 @@ namespace XivCommon.Functions {
         private unsafe byte OpenMenuDetour(IntPtr addon, int menuSize, AtkValue* atkValueArgs) {
             this.NormalSize = (int) (&atkValueArgs[0])->UInt;
 
+            var hasGameDisabled = menuSize - 7 - this.NormalSize > 0;
+
             var addonName = this.GetParentAddonName(addon);
 
             var agent = this.GetContextMenuAgent();
@@ -189,8 +192,17 @@ namespace XivCommon.Functions {
 
             this.Items.AddRange(args.AdditionalItems);
 
+            var hasCustomDisabled = this.Items.Any(item => !item.Enabled);
+            var hasAnyDisabled = hasGameDisabled || hasCustomDisabled;
+
             for (var i = 0; i < this.Items.Count; i++) {
                 var item = this.Items[i];
+
+                if (hasAnyDisabled) {
+                    var disabledArg = &atkValueArgs[7 + this.NormalSize * 2 + i + 1];
+                    this._atkValueChangeType(disabledArg, ValueType.Int);
+                    disabledArg->Int = item.Enabled ? 0 : 1;
+                }
 
                 // set up the agent to ignore this item
                 var menuActions = (byte*) (Marshal.ReadIntPtr(agent + MenuActionsPointerOffset) + MenuActionsOffset);
@@ -215,7 +227,21 @@ namespace XivCommon.Functions {
                 (&atkValueArgs[0])->UInt += 1;
             }
 
-            menuSize = 7 + (int) (&atkValueArgs[0])->UInt;
+            // need to enable all the game items manually
+            if (!hasGameDisabled && hasCustomDisabled) {
+                for (var i = 0; i < this.NormalSize; i++) {
+                    var disabledArg = &atkValueArgs[7 + this.NormalSize + i + 1];
+                    this._atkValueChangeType(disabledArg, ValueType.Int);
+                    disabledArg->Int = 0;
+                }
+            }
+
+            menuSize = (int) (&atkValueArgs[0])->UInt;
+            if (hasAnyDisabled) {
+                menuSize *= 2;
+            }
+
+            menuSize += 7;
 
             Original:
             return this.ContextMenuOpenHook!.Original(addon, menuSize, atkValueArgs);
@@ -260,11 +286,6 @@ namespace XivCommon.Functions {
     /// </summary>
     public class ContextMenuItem {
         /// <summary>
-        /// A unique ID to identify this item.
-        /// </summary>
-        public Guid Id { get; } = Guid.NewGuid();
-
-        /// <summary>
         /// The name of the context item to be shown for English clients.
         /// </summary>
         public string NameEnglish { get; set; }
@@ -288,6 +309,11 @@ namespace XivCommon.Functions {
         /// The action to perform when this item is clicked.
         /// </summary>
         public ContextMenu.ContextMenuItemSelectedDelegate Action { get; set; }
+
+        /// <summary>
+        /// If this item should be enabled in the menu.
+        /// </summary>
+        public bool Enabled { get; set; } = true;
 
         /// <summary>
         /// Create a new context menu item.
