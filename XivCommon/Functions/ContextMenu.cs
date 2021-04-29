@@ -23,6 +23,8 @@ namespace XivCommon.Functions {
             internal const string GetAddonByInternalId = "E8 ?? ?? ?? ?? 8B 6B 20";
         }
 
+        private const int MaxItems = 32;
+
         /// <summary>
         /// Offset from addon to menu type
         /// </summary>
@@ -186,11 +188,18 @@ namespace XivCommon.Functions {
             try {
                 this.OpenContextMenu?.Invoke(args);
             } catch (Exception ex) {
-                PluginLog.LogError(ex, "Exception in OpenMenuDetour");
+                Logger.LogError(ex, "Exception in OpenMenuDetour");
                 goto Original;
             }
 
             this.Items.AddRange(args.AdditionalItems);
+
+            if (this.NormalSize + this.Items.Count > MaxItems) {
+                var toKeep = MaxItems - this.NormalSize;
+                var toRemove = this.Items.Count - toKeep;
+                this.Items.RemoveRange(toKeep, toRemove);
+                Logger.LogWarning($"Context menu item limit ({MaxItems}) exceeded. Removing {toRemove} item(s).");
+            }
 
             var hasCustomDisabled = this.Items.Any(item => !item.Enabled);
             var hasAnyDisabled = hasGameDisabled || hasCustomDisabled;
@@ -272,7 +281,7 @@ namespace XivCommon.Functions {
                         info.actorWorld
                     ));
                 } catch (Exception ex) {
-                    PluginLog.LogError(ex, "Exception in custom context menu item");
+                    Logger.LogError(ex, "Exception in custom context menu item");
                 }
             }
 
