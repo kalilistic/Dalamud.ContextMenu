@@ -1,8 +1,11 @@
-﻿namespace XivCommon.Functions.ContextMenu {
+﻿using System;
+
+namespace XivCommon.Functions.ContextMenu {
     /// <summary>
     /// A custom context menu item
     /// </summary>
-    public class ContextMenuItem : BaseContextMenuItem {
+    public abstract class CustomContextMenuItem<T> : BaseContextMenuItem
+        where T : Delegate {
         /// <summary>
         /// The name of the context item to be shown for English clients.
         /// </summary>
@@ -26,14 +29,14 @@
         /// <summary>
         /// The action to perform when this item is clicked.
         /// </summary>
-        public ContextMenu.ContextMenuItemSelectedDelegate Action { get; set; }
+        public T Action { get; set; }
 
         /// <summary>
         /// Create a new context menu item.
         /// </summary>
         /// <param name="name">the English name of the item, copied to other languages</param>
         /// <param name="action">the action to perform on click</param>
-        public ContextMenuItem(string name, ContextMenu.ContextMenuItemSelectedDelegate action) {
+        public CustomContextMenuItem(string name, T action) {
             this.NameEnglish = name;
             this.NameJapanese = name;
             this.NameFrench = name;

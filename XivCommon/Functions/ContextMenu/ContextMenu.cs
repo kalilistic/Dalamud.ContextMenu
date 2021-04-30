@@ -85,7 +85,12 @@ namespace XivCommon.Functions.ContextMenu {
         /// <summary>
         /// The delegate that is run when a context menu item is selected.
         /// </summary>
-        public delegate void ContextMenuItemSelectedDelegate(ContextMenuItemSelectedArgsContainer args);
+        public delegate void ContextMenuItemSelectedDelegate(ContextMenuItemSelectedArgs args);
+
+        /// <summary>
+        /// The delegate that is run when an inventory context menu item is selected.
+        /// </summary>
+        public delegate void InventoryContextMenuItemSelectedDelegate(InventoryContextMenuItemSelectedArgs args);
 
         private unsafe delegate byte ContextMenuOpenDelegate(IntPtr addon, int menuSize, AtkValue* atkValueArgs);
 
@@ -302,7 +307,14 @@ namespace XivCommon.Functions.ContextMenu {
                 this._atkValueChangeType(newItem, ValueType.String);
 
                 var name = item switch {
-                    ContextMenuItem custom => this.Language switch {
+                    NormalContextMenuItem custom => this.Language switch {
+                        ClientLanguage.Japanese => custom.NameJapanese,
+                        ClientLanguage.English => custom.NameEnglish,
+                        ClientLanguage.German => custom.NameGerman,
+                        ClientLanguage.French => custom.NameFrench,
+                        _ => custom.NameEnglish,
+                    },
+                    InventoryContextMenuItem custom => this.Language switch {
                         ClientLanguage.Japanese => custom.NameJapanese,
                         ClientLanguage.English => custom.NameEnglish,
                         ClientLanguage.German => custom.NameGerman,
@@ -338,36 +350,42 @@ namespace XivCommon.Functions.ContextMenu {
 
             var item = this.Items[index];
             // a custom item is being clicked
-            if (item is ContextMenuItem custom) {
-                var (inventory, agent) = this.GetContextMenuAgent();
+            if (item is CustomContextMenuItem<ContextMenuItemSelectedDelegate> custom) {
+                var (_, agent) = this.GetContextMenuAgent();
                 var addonName = this.GetParentAddonName(addon);
+                var info = GetAgentInfo(agent);
 
-                ContextMenuItemSelectedArgsContainer container;
-                if (inventory) {
-                    var info = GetInventoryAgentInfo(agent);
-                    container = new ContextMenuItemSelectedArgsContainer(new InventoryContextMenuItemSelectedArgs(
-                        addon,
-                        agent,
-                        addonName,
-                        info.itemId,
-                        info.itemAmount,
-                        info.itemHq
-                    ));
-                } else {
-                    var info = GetAgentInfo(agent);
-                    container = new ContextMenuItemSelectedArgsContainer(new ContextMenuItemSelectedArgs(
-                        addon,
-                        agent,
-                        addonName,
-                        info.actorId,
-                        info.contentIdLower,
-                        info.text,
-                        info.actorWorld
-                    ));
-                }
+                var args = new ContextMenuItemSelectedArgs(
+                    addon,
+                    agent,
+                    addonName,
+                    info.actorId,
+                    info.contentIdLower,
+                    info.text,
+                    info.actorWorld
+                );
 
                 try {
-                    custom.Action(container);
+                    custom.Action(args);
+                } catch (Exception ex) {
+                    Logger.LogError(ex, "Exception in custom context menu item");
+                }
+            } else if (item is CustomContextMenuItem<InventoryContextMenuItemSelectedDelegate> invCustom) {
+                var (_, agent) = this.GetContextMenuAgent();
+                var addonName = this.GetParentAddonName(addon);
+                var info = GetInventoryAgentInfo(agent);
+
+                var args = new InventoryContextMenuItemSelectedArgs(
+                    addon,
+                    agent,
+                    addonName,
+                    info.itemId,
+                    info.itemAmount,
+                    info.itemHq
+                );
+
+                try {
+                    invCustom.Action(args);
                 } catch (Exception ex) {
                     Logger.LogError(ex, "Exception in custom context menu item");
                 }
