@@ -6,6 +6,8 @@ namespace XivCommon.Functions.ContextMenu {
     /// </summary>
     public abstract class CustomContextMenuItem<T> : BaseContextMenuItem
         where T : Delegate {
+        internal IntPtr Agent { get; set; }
+
         /// <summary>
         /// The name of the context item to be shown for English clients.
         /// </summary>

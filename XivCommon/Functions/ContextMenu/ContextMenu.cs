@@ -269,6 +269,13 @@ namespace XivCommon.Functions.ContextMenu {
                 // remove any NormalContextMenuItems that may have been added - these will crash the game
                 args.Items.RemoveAll(item => item is NormalContextMenuItem);
 
+                // set the agent of any remaining custom items
+                foreach (var item in args.Items) {
+                    if (item is InventoryContextMenuItem custom) {
+                        custom.Agent = agent;
+                    }
+                }
+
                 this.Items.AddRange(args.Items);
             } else {
                 var info = GetAgentInfo(agent);
@@ -293,6 +300,13 @@ namespace XivCommon.Functions.ContextMenu {
 
                 // remove any InventoryContextMenuItems that may have been added - these will crash the game
                 args.Items.RemoveAll(item => item is InventoryContextMenuItem);
+
+                // set the agent of any remaining custom items
+                foreach (var item in args.Items) {
+                    if (item is NormalContextMenuItem custom) {
+                        custom.Agent = agent;
+                    }
+                }
 
                 this.Items.AddRange(args.Items);
             }
@@ -371,13 +385,12 @@ namespace XivCommon.Functions.ContextMenu {
             switch (item) {
                 // a custom item is being clicked
                 case NormalContextMenuItem custom: {
-                    var (_, agent) = this.GetContextMenuAgent();
                     var addonName = this.GetParentAddonName(addon);
-                    var info = GetAgentInfo(agent);
+                    var info = GetAgentInfo(custom.Agent);
 
                     var args = new ContextMenuItemSelectedArgs(
                         addon,
-                        agent,
+                        custom.Agent,
                         addonName,
                         info.actorId,
                         info.contentIdLower,
@@ -394,13 +407,12 @@ namespace XivCommon.Functions.ContextMenu {
                     break;
                 }
                 case InventoryContextMenuItem custom: {
-                    var (_, agent) = this.GetContextMenuAgent();
                     var addonName = this.GetParentAddonName(addon);
-                    var info = GetInventoryAgentInfo(agent);
+                    var info = GetInventoryAgentInfo(custom.Agent);
 
                     var args = new InventoryContextMenuItemSelectedArgs(
                         addon,
-                        agent,
+                        custom.Agent,
                         addonName,
                         info.itemId,
                         info.itemAmount,
