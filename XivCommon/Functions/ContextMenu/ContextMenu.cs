@@ -48,8 +48,6 @@ namespace XivCommon.Functions.ContextMenu {
         /// </summary>
         private const int InventoryMenuActionsOffset = 0x558;
 
-        private const int AgentAddonOffset = 0x20;
-
         private const int ActorIdOffset = 0xEF0;
         private const int ContentIdLowerOffset = 0xEE0;
         private const int TextPointerOffset = 0xE08;
@@ -250,6 +248,7 @@ namespace XivCommon.Functions.ContextMenu {
 
             if (inventory) {
                 var info = GetInventoryAgentInfo(agent);
+
                 var args = new InventoryContextMenuOpenArgs(
                     addon,
                     agent,
@@ -259,6 +258,7 @@ namespace XivCommon.Functions.ContextMenu {
                     info.itemHq
                 );
                 args.Items.AddRange(nativeItems);
+
                 try {
                     this.OpenInventoryContextMenu?.Invoke(args);
                 } catch (Exception ex) {
@@ -266,9 +266,13 @@ namespace XivCommon.Functions.ContextMenu {
                     goto Original;
                 }
 
+                // remove any NormalContextMenuItems that may have been added - these will crash the game
+                args.Items.RemoveAll(item => item is NormalContextMenuItem);
+
                 this.Items.AddRange(args.Items);
             } else {
                 var info = GetAgentInfo(agent);
+
                 var args = new ContextMenuOpenArgs(
                     addon,
                     agent,
@@ -279,12 +283,16 @@ namespace XivCommon.Functions.ContextMenu {
                     info.actorWorld
                 );
                 args.Items.AddRange(nativeItems);
+
                 try {
                     this.OpenContextMenu?.Invoke(args);
                 } catch (Exception ex) {
                     Logger.LogError(ex, "Exception in OpenMenuDetour");
                     goto Original;
                 }
+
+                // remove any InventoryContextMenuItems that may have been added - these will crash the game
+                args.Items.RemoveAll(item => item is InventoryContextMenuItem);
 
                 this.Items.AddRange(args.Items);
             }
@@ -360,45 +368,52 @@ namespace XivCommon.Functions.ContextMenu {
             }
 
             var item = this.Items[index];
-            // a custom item is being clicked
-            if (item is CustomContextMenuItem<ContextMenuItemSelectedDelegate> custom) {
-                var (_, agent) = this.GetContextMenuAgent();
-                var addonName = this.GetParentAddonName(addon);
-                var info = GetAgentInfo(agent);
+            switch (item) {
+                // a custom item is being clicked
+                case NormalContextMenuItem custom: {
+                    var (_, agent) = this.GetContextMenuAgent();
+                    var addonName = this.GetParentAddonName(addon);
+                    var info = GetAgentInfo(agent);
 
-                var args = new ContextMenuItemSelectedArgs(
-                    addon,
-                    agent,
-                    addonName,
-                    info.actorId,
-                    info.contentIdLower,
-                    info.text,
-                    info.actorWorld
-                );
+                    var args = new ContextMenuItemSelectedArgs(
+                        addon,
+                        agent,
+                        addonName,
+                        info.actorId,
+                        info.contentIdLower,
+                        info.text,
+                        info.actorWorld
+                    );
 
-                try {
-                    custom.Action(args);
-                } catch (Exception ex) {
-                    Logger.LogError(ex, "Exception in custom context menu item");
+                    try {
+                        custom.Action(args);
+                    } catch (Exception ex) {
+                        Logger.LogError(ex, "Exception in custom context menu item");
+                    }
+
+                    break;
                 }
-            } else if (item is CustomContextMenuItem<InventoryContextMenuItemSelectedDelegate> invCustom) {
-                var (_, agent) = this.GetContextMenuAgent();
-                var addonName = this.GetParentAddonName(addon);
-                var info = GetInventoryAgentInfo(agent);
+                case InventoryContextMenuItem custom: {
+                    var (_, agent) = this.GetContextMenuAgent();
+                    var addonName = this.GetParentAddonName(addon);
+                    var info = GetInventoryAgentInfo(agent);
 
-                var args = new InventoryContextMenuItemSelectedArgs(
-                    addon,
-                    agent,
-                    addonName,
-                    info.itemId,
-                    info.itemAmount,
-                    info.itemHq
-                );
+                    var args = new InventoryContextMenuItemSelectedArgs(
+                        addon,
+                        agent,
+                        addonName,
+                        info.itemId,
+                        info.itemAmount,
+                        info.itemHq
+                    );
 
-                try {
-                    invCustom.Action(args);
-                } catch (Exception ex) {
-                    Logger.LogError(ex, "Exception in custom context menu item");
+                    try {
+                        custom.Action(args);
+                    } catch (Exception ex) {
+                        Logger.LogError(ex, "Exception in custom context menu item");
+                    }
+
+                    break;
                 }
             }
 
