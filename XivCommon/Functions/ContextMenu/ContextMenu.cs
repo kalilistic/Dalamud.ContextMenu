@@ -78,8 +78,19 @@ namespace XivCommon.Functions.ContextMenu {
         /// </summary>
         public event ContextMenuOpenEventDelegate? OpenContextMenu;
 
+        /// <summary>
+        /// The delegate for inventory context menu events.
+        /// </summary>
         public delegate void InventoryContextMenuOpenEventDelegate(InventoryContextMenuOpenArgs args);
 
+        /// <summary>
+        /// <para>
+        /// The event that is fired when an inventory context menu is being prepared for opening.
+        /// </para>
+        /// <para>
+        /// Requires the <see cref="Hooks.ContextMenu"/> hook to be enabled.
+        /// </para>
+        /// </summary>
         public event InventoryContextMenuOpenEventDelegate? OpenInventoryContextMenu;
 
         /// <summary>

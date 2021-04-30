@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 
 namespace XivCommon.Functions.ContextMenu.Inventory {
+    /// <summary>
+    /// The arguments for when an inventory context menu is opened
+    /// </summary>
     public class InventoryContextMenuOpenArgs : BaseInventoryContextMenuArgs {
         /// <summary>
         /// Context menu items in this menu.

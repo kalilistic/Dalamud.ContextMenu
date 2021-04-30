@@ -36,7 +36,7 @@ namespace XivCommon.Functions.ContextMenu {
         /// </summary>
         /// <param name="name">the English name of the item, copied to other languages</param>
         /// <param name="action">the action to perform on click</param>
-        public CustomContextMenuItem(string name, T action) {
+        internal CustomContextMenuItem(string name, T action) {
             this.NameEnglish = name;
             this.NameJapanese = name;
             this.NameFrench = name;

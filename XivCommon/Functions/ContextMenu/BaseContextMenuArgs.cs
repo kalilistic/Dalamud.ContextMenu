@@ -1,6 +1,9 @@
 ﻿using System;
 
 namespace XivCommon.Functions.ContextMenu {
+    /// <summary>
+    /// The base class for context menu arguments
+    /// </summary>
     public abstract class BaseContextMenuArgs {
         /// <summary>
         /// Pointer to the context menu addon.

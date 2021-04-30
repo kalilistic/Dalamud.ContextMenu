@@ -1,6 +1,9 @@
 ﻿using System;
 
 namespace XivCommon.Functions.ContextMenu.Inventory {
+    /// <summary>
+    /// The base class for inventory context menu arguments
+    /// </summary>
     public abstract class BaseInventoryContextMenuArgs {
         /// <summary>
         /// Pointer to the context menu addon.
@@ -17,10 +20,19 @@ namespace XivCommon.Functions.ContextMenu.Inventory {
         /// </summary>
         public string? ParentAddonName { get; }
 
+        /// <summary>
+        /// The ID of the item this context menu is for.
+        /// </summary>
         public uint ItemId { get; }
 
+        /// <summary>
+        /// The amount of the item this context menu is for.
+        /// </summary>
         public uint ItemAmount { get; }
 
+        /// <summary>
+        /// If the item this context menu is for is high-quality.
+        /// </summary>
         public bool ItemHq { get; }
 
         internal BaseInventoryContextMenuArgs(IntPtr addon, IntPtr agent, string? parentAddonName, uint itemId, uint itemAmount, bool itemHq) {
