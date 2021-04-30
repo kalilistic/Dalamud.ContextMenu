@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using Dalamud.Plugin;
 using XivCommon.Functions;
+using XivCommon.Functions.ContextMenu;
 
 namespace XivCommon {
     /// <summary>
@@ -77,7 +78,7 @@ namespace XivCommon {
             this.Examine = new Examine(this, scanner);
             this.Talk = new Talk(scanner, seStringManager, hooks.HasFlag(Hooks.Talk));
             this.ChatBubbles = new ChatBubbles(dalamud, scanner, seStringManager, hooks.HasFlag(Hooks.ChatBubbles));
-            this.ContextMenu = new ContextMenu(this, scanner, @interface.ClientState.ClientLanguage, hooks);
+            this.ContextMenu = new ContextMenu(this, scanner, @interface.Framework.Gui, @interface.ClientState.ClientLanguage, hooks);
 
             if (scanner.TryScanText(Signatures.GetAgentByInternalId, out var byInternalIdPtr, "GetAgentByInternalId")) {
                 this.GetAgentByInternalIdInternal = Marshal.GetDelegateForFunctionPointer<GetAgentByInternalIdDelegate>(byInternalIdPtr);
