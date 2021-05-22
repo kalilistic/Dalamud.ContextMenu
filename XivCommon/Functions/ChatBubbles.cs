@@ -21,7 +21,7 @@ namespace XivCommon.Functions {
 
         private delegate void OpenChatBubbleDelegate(IntPtr manager, IntPtr actor, IntPtr text, byte a4);
 
-        private unsafe delegate void UpdateChatBubbleDelegate(ChatBubble* bubble, IntPtr actor, IntPtr a3);
+        private delegate void UpdateChatBubbleDelegate(IntPtr bubblePtr, IntPtr actor);
 
         private Hook<OpenChatBubbleDelegate>? OpenChatBubbleHook { get; }
 
@@ -71,10 +71,7 @@ namespace XivCommon.Functions {
             }
 
             if (scanner.TryScanText(Signatures.ChatBubbleUpdate, out var updatePtr, "chat bubbles update")) {
-                unsafe {
-                    this.UpdateChatBubbleHook = new Hook<UpdateChatBubbleDelegate>(updatePtr + 9, new UpdateChatBubbleDelegate(this.UpdateChatBubbleDetour));
-                }
-
+                this.UpdateChatBubbleHook = new Hook<UpdateChatBubbleDelegate>(updatePtr + 9, new UpdateChatBubbleDelegate(this.UpdateChatBubbleDetour));
                 this.UpdateChatBubbleHook.Enable();
             }
         }
@@ -116,16 +113,17 @@ namespace XivCommon.Functions {
             }
         }
 
-        private unsafe void UpdateChatBubbleDetour(ChatBubble* bubble, IntPtr actor, IntPtr a3) {
+        private void UpdateChatBubbleDetour(IntPtr bubblePtr, IntPtr actor) {
             try {
-                this.UpdateChatBubbleDetourInner(bubble, actor, a3);
+                this.UpdateChatBubbleDetourInner(bubblePtr, actor);
             } catch (Exception ex) {
                 Logger.LogError(ex, "Exception in update chat bubble detour");
-                this.UpdateChatBubbleHook!.Original(bubble, actor, a3);
+                this.UpdateChatBubbleHook!.Original(bubblePtr, actor);
             }
         }
 
-        private unsafe void UpdateChatBubbleDetourInner(ChatBubble* bubble, IntPtr actorPtr, IntPtr a3) {
+        private unsafe void UpdateChatBubbleDetourInner(IntPtr bubblePtr, IntPtr actorPtr) {
+            // var bubble = (ChatBubble*) bubblePtr;
             var actorStruct = Marshal.PtrToStructure<Dalamud.Game.ClientState.Structs.Actor>(actorPtr);
             var actor = new Actor(actorPtr, actorStruct, this.Dalamud);
 
@@ -135,7 +133,7 @@ namespace XivCommon.Functions {
                 Logger.LogError(ex, "Exception in chat bubble update event");
             }
 
-            this.UpdateChatBubbleHook!.Original(bubble, actor.Address, a3);
+            this.UpdateChatBubbleHook!.Original(bubblePtr, actor.Address);
         }
     }
 
