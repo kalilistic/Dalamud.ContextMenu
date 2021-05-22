@@ -11,24 +11,24 @@ namespace XivCommon {
         ///
         /// This flag is used to disable all hooking.
         /// </summary>
-        None,
+        None = 0,
 
         /// <summary>
         /// The BattleTalk hook.
         ///
         /// This hook is used in order to enable the BattleTalk events.
         /// </summary>
-        BattleTalk,
+        BattleTalk = 1 << 1,
 
         /// <summary>
         /// Hooks used for refreshing Party Finder listings.
         /// </summary>
-        PartyFinderListings,
+        PartyFinderListings = 1 << 2,
 
         /// <summary>
         /// Hooks used for Party Finder join events.
         /// </summary>
-        PartyFinderJoins,
+        PartyFinderJoins = 1 << 3,
 
         /// <summary>
         /// All Party Finder hooks.
@@ -42,21 +42,21 @@ namespace XivCommon {
         ///
         /// This hook is used in order to enable the Talk events.
         /// </summary>
-        Talk,
+        Talk = 1 << 4,
 
         /// <summary>
         /// The chat bubbles hooks.
         ///
         /// This hook is used in order to enable the chat bubbles events.
         /// </summary>
-        ChatBubbles,
+        ChatBubbles = 1 << 5,
 
         /// <summary>
         /// The context menu hooks.
         ///
         /// This hook is used in order to enable context menu functions.
         /// </summary>
-        ContextMenu,
+        ContextMenu = 1 << 6,
     }
 
     internal static class HooksExt {
