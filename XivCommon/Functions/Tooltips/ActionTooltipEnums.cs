@@ -1,4 +1,6 @@
-﻿namespace XivCommon.Functions.Tooltips {
+﻿using System;
+
+namespace XivCommon.Functions.Tooltips {
     public enum ActionTooltipString {
         Name = 0,
         Type = 1,
@@ -15,5 +17,18 @@
         Description = 13,
         Acquired = 14,
         Affinity = 15,
+    }
+
+    [Flags]
+    public enum ActionTooltipFields {
+        Range = 1 << 0,
+        Radius = 1 << 1,
+        Cost = 1 << 2,
+        Recast = 1 << 3,
+        Cast = 1 << 4,
+        Description = 1 << 5,
+        Acquired = 1 << 6,
+        Affinity = 1 << 7,
+        Unknown8 = 1 << 8,
     }
 }

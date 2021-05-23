@@ -1,4 +1,6 @@
-﻿namespace XivCommon.Functions.Tooltips {
+﻿using System;
+
+namespace XivCommon.Functions.Tooltips {
     public enum ItemTooltipString {
         Name = 0,
         GlamourName = 1,
@@ -47,5 +49,19 @@
         Materia4Effect = 61,
         Materia5Effect = 62,
         ControllerControls = 64,
+    }
+
+
+    [Flags]
+    public enum ItemTooltipFields {
+        Crafter = 1 << 0,
+        Description = 1 << 1,
+        VendorSellPrice = 1 << 2,
+        // something to do with glamour - controls whether the little + symbol on the item icon appears
+        Unknown10 = 1 << 10,
+        Stat1 = 1 << 11,
+        Stat2 = 1 << 12,
+        Stat3 = 1 << 13,
+        Unknown19 = 1 << 19,
     }
 }

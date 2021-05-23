@@ -15,9 +15,9 @@ namespace XivCommon.Functions.Tooltips {
 
         public unsafe delegate void StringArrayDataSetStringDelegate(IntPtr self, int index, byte* str, byte updatePtr, byte copyToUi, byte dontSetModified);
 
-        private unsafe delegate IntPtr ItemGenerateTooltipDelegate(IntPtr addon, uint** numberArrayData, byte*** stringArrayData);
+        private unsafe delegate IntPtr ItemGenerateTooltipDelegate(IntPtr addon, int** numberArrayData, byte*** stringArrayData);
 
-        private unsafe delegate IntPtr ActionGenerateTooltipDelegate(IntPtr addon, uint** numberArrayData, byte*** stringArrayData);
+        private unsafe delegate IntPtr ActionGenerateTooltipDelegate(IntPtr addon, int** numberArrayData, byte*** stringArrayData);
 
         private StringArrayDataSetStringDelegate? SadSetString { get; }
         private Hook<ItemGenerateTooltipDelegate>? ItemGenerateTooltipHook { get; }
@@ -72,7 +72,7 @@ namespace XivCommon.Functions.Tooltips {
             this.ItemGenerateTooltipHook?.Dispose();
         }
 
-        private unsafe IntPtr ItemGenerateTooltipDetour(IntPtr addon, uint** numberArrayData, byte*** stringArrayData) {
+        private unsafe IntPtr ItemGenerateTooltipDetour(IntPtr addon, int** numberArrayData, byte*** stringArrayData) {
             try {
                 return this.ItemGenerateTooltipDetourInner(addon, numberArrayData, stringArrayData);
             } catch (Exception ex) {
@@ -82,7 +82,7 @@ namespace XivCommon.Functions.Tooltips {
             return this.ItemGenerateTooltipHook!.Original(addon, numberArrayData, stringArrayData);
         }
 
-        private unsafe IntPtr ItemGenerateTooltipDetourInner(IntPtr addon, uint** numberArrayData, byte*** stringArrayData) {
+        private unsafe IntPtr ItemGenerateTooltipDetourInner(IntPtr addon, int** numberArrayData, byte*** stringArrayData) {
             // var v3 = *(numberArrayData + 4);
             // var v9 = *(v3 + 4);
             //
@@ -90,14 +90,14 @@ namespace XivCommon.Functions.Tooltips {
             //     goto Original;
             // }
 
-            this.ItemTooltip = new ItemTooltip(this.SeStringManager, this.SadSetString!, stringArrayData);
+            this.ItemTooltip = new ItemTooltip(this.SeStringManager, this.SadSetString!, stringArrayData, numberArrayData);
 
             this.OnItemTooltip?.Invoke(this.ItemTooltip, this.GameGui.HoveredItem);
 
             return this.ItemGenerateTooltipHook!.Original(addon, numberArrayData, stringArrayData);
         }
 
-        private unsafe IntPtr ActionGenerateTooltipDetour(IntPtr addon, uint** numberArrayData, byte*** stringArrayData) {
+        private unsafe IntPtr ActionGenerateTooltipDetour(IntPtr addon, int** numberArrayData, byte*** stringArrayData) {
             try {
                 return this.ActionGenerateTooltipDetourInner(addon, numberArrayData, stringArrayData);
             } catch (Exception ex) {
@@ -107,8 +107,8 @@ namespace XivCommon.Functions.Tooltips {
             return this.ActionGenerateTooltipHook!.Original(addon, numberArrayData, stringArrayData);
         }
 
-        private unsafe IntPtr ActionGenerateTooltipDetourInner(IntPtr addon, uint** numberArrayData, byte*** stringArrayData) {
-            this.ActionTooltip = new ActionTooltip(this.SeStringManager, this.SadSetString!, stringArrayData);
+        private unsafe IntPtr ActionGenerateTooltipDetourInner(IntPtr addon, int** numberArrayData, byte*** stringArrayData) {
+            this.ActionTooltip = new ActionTooltip(this.SeStringManager, this.SadSetString!, stringArrayData, numberArrayData);
 
             this.OnActionTooltip?.Invoke(this.ActionTooltip, this.GameGui.HoveredAction);
 
