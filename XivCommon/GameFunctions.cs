@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using Dalamud.Plugin;
 using XivCommon.Functions;
 using XivCommon.Functions.ContextMenu;
+using XivCommon.Functions.Tooltips;
 
 namespace XivCommon {
     /// <summary>
@@ -54,7 +55,7 @@ namespace XivCommon {
         public Talk Talk { get; }
 
         /// <summary>
-        ///  Chat bubble functions and events
+        /// Chat bubble functions and events
         /// </summary>
         public ChatBubbles ChatBubbles { get; }
 
@@ -62,6 +63,11 @@ namespace XivCommon {
         /// Context menu functions
         /// </summary>
         public ContextMenu ContextMenu { get; }
+
+        /// <summary>
+        /// Tooltip events
+        /// </summary>
+        public Tooltips Tooltips { get; }
 
         internal GameFunctions(Hooks hooks, DalamudPluginInterface @interface) {
             this.Interface = @interface;
@@ -79,6 +85,7 @@ namespace XivCommon {
             this.Talk = new Talk(scanner, seStringManager, hooks.HasFlag(Hooks.Talk));
             this.ChatBubbles = new ChatBubbles(dalamud, scanner, seStringManager, hooks.HasFlag(Hooks.ChatBubbles));
             this.ContextMenu = new ContextMenu(this, scanner, @interface.Framework.Gui, @interface.ClientState.ClientLanguage, hooks);
+            this.Tooltips = new Tooltips(scanner, @interface.Framework.Gui, seStringManager, hooks.HasFlag(Hooks.Tooltips));
 
             if (scanner.TryScanText(Signatures.GetAgentByInternalId, out var byInternalIdPtr, "GetAgentByInternalId")) {
                 this.GetAgentByInternalIdInternal = Marshal.GetDelegateForFunctionPointer<GetAgentByInternalIdDelegate>(byInternalIdPtr);
@@ -91,6 +98,7 @@ namespace XivCommon {
 
         /// <inheritdoc />
         public void Dispose() {
+            this.Tooltips.Dispose();
             this.ContextMenu.Dispose();
             this.ChatBubbles.Dispose();
             this.Talk.Dispose();
@@ -112,7 +120,7 @@ namespace XivCommon {
         /// <returns>Pointer</returns>
         public IntPtr GetAgentModule() {
             var uiModule = this.GetUiModule();
-            var getAgentModulePtr = FollowPtrChain(uiModule, new[] {0, 0x110});
+            var getAgentModulePtr = FollowPtrChain(uiModule, new[] { 0, 0x110 });
             var getAgentModule = Marshal.GetDelegateForFunctionPointer<GetAgentModuleDelegate>(getAgentModulePtr);
             return getAgentModule(uiModule);
         }

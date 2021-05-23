@@ -14,6 +14,13 @@ namespace XivCommon {
         None = 0,
 
         /// <summary>
+        /// The Tooltips hooks.
+        ///
+        /// This hook is used in order to enable the tooltip events.
+        /// </summary>
+        Tooltips = 1 << 0,
+
+        /// <summary>
         /// The BattleTalk hook.
         ///
         /// This hook is used in order to enable the BattleTalk events.

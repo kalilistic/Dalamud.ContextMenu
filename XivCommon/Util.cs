@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Dalamud.Plugin;
+using Dalamud.Game.Text.SeStringHandling;
 
 namespace XivCommon {
     internal static class Util {
@@ -26,6 +26,11 @@ namespace XivCommon {
             }
 
             return buf.ToArray();
+        }
+
+        internal static SeString ReadSeString(IntPtr memory, SeStringManager manager) {
+            var terminated = ReadTerminated(memory);
+            return manager.Parse(terminated);
         }
 
         internal static void PrintMissingSig(string name) {
