@@ -1,7 +1,11 @@
 ﻿using System;
 
 namespace XivCommon.Functions.Tooltips {
+    /// <summary>
+    /// An enum containing the strings used in action tooltips.
+    /// </summary>
     public enum ActionTooltipString {
+        #pragma warning disable 1591
         Name = 0,
         Type = 1,
         RangeLabel = 3,
@@ -17,10 +21,15 @@ namespace XivCommon.Functions.Tooltips {
         Description = 13,
         Acquired = 14,
         Affinity = 15,
+        #pragma warning restore 1591
     }
 
+    /// <summary>
+    /// An enum containing the fields that can be displayed in action tooltips.
+    /// </summary>
     [Flags]
     public enum ActionTooltipFields {
+        #pragma warning disable 1591
         Range = 1 << 0,
         Radius = 1 << 1,
         Cost = 1 << 2,
@@ -30,5 +39,6 @@ namespace XivCommon.Functions.Tooltips {
         Acquired = 1 << 6,
         Affinity = 1 << 7,
         Unknown8 = 1 << 8,
+        #pragma warning restore 1591
     }
 }

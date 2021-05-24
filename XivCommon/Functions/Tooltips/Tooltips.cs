@@ -6,6 +6,9 @@ using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Hooking;
 
 namespace XivCommon.Functions.Tooltips {
+    /// <summary>
+    /// The class containing tooltip functionality
+    /// </summary>
     public class Tooltips : IDisposable {
         private static class Signatures {
             internal const string ItemGenerateTooltip = "48 89 5C 24 ?? 55 56 57 41 54 41 55 41 56 41 57 48 83 EC 50 48 8B 42 ??";
@@ -13,7 +16,7 @@ namespace XivCommon.Functions.Tooltips {
             internal const string SadSetString = "E8 ?? ?? ?? ?? F6 47 14 08";
         }
 
-        public unsafe delegate void StringArrayDataSetStringDelegate(IntPtr self, int index, byte* str, byte updatePtr, byte copyToUi, byte dontSetModified);
+        internal unsafe delegate void StringArrayDataSetStringDelegate(IntPtr self, int index, byte* str, byte updatePtr, byte copyToUi, byte dontSetModified);
 
         private unsafe delegate IntPtr ItemGenerateTooltipDelegate(IntPtr addon, int** numberArrayData, byte*** stringArrayData);
 
@@ -23,11 +26,34 @@ namespace XivCommon.Functions.Tooltips {
         private Hook<ItemGenerateTooltipDelegate>? ItemGenerateTooltipHook { get; }
         private Hook<ActionGenerateTooltipDelegate>? ActionGenerateTooltipHook { get; }
 
+        /// <summary>
+        /// The delegate for item tooltip events.
+        /// </summary>
         public delegate void ItemTooltipEventDelegate(ItemTooltip itemTooltip, ulong itemId);
 
+        /// <summary>
+        /// The tooltip for action tooltip events.
+        /// </summary>
         public delegate void ActionTooltipEventDelegate(ActionTooltip actionTooltip, HoveredAction action);
 
+        /// <summary>
+        /// <para>
+        /// The event that is fired when an item tooltip is being generated for display.
+        /// </para>
+        /// <para>
+        /// Requires the <see cref="Hooks.Tooltips"/> hook to be enabled.
+        /// </para>
+        /// </summary>
         public event ItemTooltipEventDelegate? OnItemTooltip;
+
+        /// <summary>
+        /// <para>
+        /// The event that is fired when an action tooltip is being generated for display.
+        /// </para>
+        /// <para>
+        /// Requires the <see cref="Hooks.Tooltips"/> hook to be enabled.
+        /// </para>
+        /// </summary>
         public event ActionTooltipEventDelegate? OnActionTooltip;
 
         private GameGui GameGui { get; }

@@ -2,29 +2,49 @@
 using Dalamud.Game.Text.SeStringHandling;
 
 namespace XivCommon.Functions.Tooltips {
+    /// <summary>
+    /// The base class for tooltips
+    /// </summary>
     public abstract unsafe class BaseTooltip {
-        protected SeStringManager Manager { get; }
-        protected Tooltips.StringArrayDataSetStringDelegate SadSetString { get; }
-        protected readonly byte*** StringArrayData; // this is StringArrayData* when ClientStructs is updated
+        private SeStringManager Manager { get; }
+        private Tooltips.StringArrayDataSetStringDelegate SadSetString { get; }
+
+        /// <summary>
+        /// A pointer to the StringArrayData class for this tooltip.
+        /// </summary>
+        private readonly byte*** _stringArrayData; // this is StringArrayData* when ClientStructs is updated
+
+        /// <summary>
+        /// A pointer to the NumberArrayData class for this tooltip.
+        /// </summary>
         protected readonly int** NumberArrayData;
 
         internal BaseTooltip(SeStringManager manager, Tooltips.StringArrayDataSetStringDelegate sadSetString, byte*** stringArrayData, int** numberArrayData) {
             this.Manager = manager;
             this.SadSetString = sadSetString;
-            this.StringArrayData = stringArrayData;
+            this._stringArrayData = stringArrayData;
             this.NumberArrayData = numberArrayData;
         }
 
-        protected SeString this[int offset] {
+        /// <summary>
+        /// <para>
+        /// Gets the SeString at the given index for this tooltip.
+        /// </para>
+        /// <para>
+        /// Implementors should provide an enum accessor for this.
+        /// </para>
+        /// </summary>
+        /// <param name="index">string index to retrieve</param>
+        protected SeString this[int index] {
             get {
-                var ptr = *(this.StringArrayData + 4) + offset;
+                var ptr = *(this._stringArrayData + 4) + index;
                 return Util.ReadSeString((IntPtr) (*ptr), this.Manager);
             }
             set {
                 var encoded = value.Encode().Terminate();
 
                 fixed (byte* encodedPtr = encoded) {
-                    this.SadSetString((IntPtr) this.StringArrayData, offset, encodedPtr, 0, 1, 1);
+                    this.SadSetString((IntPtr) this._stringArrayData, index, encodedPtr, 0, 1, 1);
                 }
             }
         }
