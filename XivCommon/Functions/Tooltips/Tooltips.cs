@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using Dalamud.Game;
+using Dalamud.Game.Internal;
 using Dalamud.Game.Internal.Gui;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Hooking;
@@ -56,12 +57,22 @@ namespace XivCommon.Functions.Tooltips {
         /// </summary>
         public event ActionTooltipEventDelegate? OnActionTooltip;
 
+        private Framework Framework { get; }
         private GameGui GameGui { get; }
         private SeStringManager SeStringManager { get; }
         private ItemTooltip? ItemTooltip { get; set; }
         private ActionTooltip? ActionTooltip { get; set; }
 
-        internal Tooltips(SigScanner scanner, GameGui gui, SeStringManager manager, bool enabled) {
+        private ulong LastItem { get; set; }
+        private bool ItemVisible { get; set; }
+        private bool ItemStateChanged { get; set; } = true;
+
+        private HoveredAction? LastAction { get; set; }
+        private bool ActionVisible { get; set; }
+        private bool ActionStateChanged { get; set; } = true;
+
+        internal Tooltips(SigScanner scanner, Framework framework, GameGui gui, SeStringManager manager, bool enabled) {
+            this.Framework = framework;
             this.GameGui = gui;
             this.SeStringManager = manager;
 
@@ -74,6 +85,8 @@ namespace XivCommon.Functions.Tooltips {
             if (!enabled) {
                 return;
             }
+
+            this.Framework.OnUpdateEvent += this.OnFrameworkUpdate;
 
             if (scanner.TryScanText(Signatures.ItemGenerateTooltip, out var generateItemPtr, "Tooltips - Items")) {
                 unsafe {
@@ -96,11 +109,28 @@ namespace XivCommon.Functions.Tooltips {
         public void Dispose() {
             this.ActionGenerateTooltipHook?.Dispose();
             this.ItemGenerateTooltipHook?.Dispose();
+            this.Framework.OnUpdateEvent -= this.OnFrameworkUpdate;
+        }
+
+        private void OnFrameworkUpdate(Framework framework) {
+            var itemVisible = framework.Gui.GetAddonByName("ItemDetail", 1)?.Visible ?? false;
+            var actionVisible = framework.Gui.GetAddonByName("ActionDetail", 1)?.Visible ?? false;
+
+            if (itemVisible != this.ItemVisible) {
+                this.ItemStateChanged = true;
+            }
+
+            if (actionVisible != this.ActionVisible) {
+                this.ActionStateChanged = true;
+            }
+
+            this.ItemVisible = itemVisible;
+            this.ActionVisible = actionVisible;
         }
 
         private unsafe IntPtr ItemGenerateTooltipDetour(IntPtr addon, int** numberArrayData, byte*** stringArrayData) {
             try {
-                return this.ItemGenerateTooltipDetourInner(addon, numberArrayData, stringArrayData);
+                this.ItemGenerateTooltipDetourInner(numberArrayData, stringArrayData);
             } catch (Exception ex) {
                 Logger.LogError(ex, "Exception in item tooltip detour");
             }
@@ -108,24 +138,26 @@ namespace XivCommon.Functions.Tooltips {
             return this.ItemGenerateTooltipHook!.Original(addon, numberArrayData, stringArrayData);
         }
 
-        private unsafe IntPtr ItemGenerateTooltipDetourInner(IntPtr addon, int** numberArrayData, byte*** stringArrayData) {
-            // var v3 = *(numberArrayData + 4);
-            // var v9 = *(v3 + 4);
-            //
-            // if ((v9 & 2) == 0) {
-            //     goto Original;
-            // }
+        private unsafe void ItemGenerateTooltipDetourInner(int** numberArrayData, byte*** stringArrayData) {
+            var itemId = this.GameGui.HoveredItem;
+            if (this.ItemStateChanged || this.LastItem != itemId) {
+                this.ItemStateChanged = false;
 
-            this.ItemTooltip = new ItemTooltip(this.SeStringManager, this.SadSetString!, stringArrayData, numberArrayData);
+                this.ItemTooltip = new ItemTooltip(this.SeStringManager, this.SadSetString!, stringArrayData, numberArrayData);
 
-            this.OnItemTooltip?.Invoke(this.ItemTooltip, this.GameGui.HoveredItem);
+                try {
+                    this.OnItemTooltip?.Invoke(this.ItemTooltip, itemId);
+                } catch (Exception ex) {
+                    Logger.LogError(ex, "Exception in OnItemTooltip event");
+                }
+            }
 
-            return this.ItemGenerateTooltipHook!.Original(addon, numberArrayData, stringArrayData);
+            this.LastItem = itemId;
         }
 
         private unsafe IntPtr ActionGenerateTooltipDetour(IntPtr addon, int** numberArrayData, byte*** stringArrayData) {
             try {
-                return this.ActionGenerateTooltipDetourInner(addon, numberArrayData, stringArrayData);
+                this.ActionGenerateTooltipDetourInner(numberArrayData, stringArrayData);
             } catch (Exception ex) {
                 Logger.LogError(ex, "Exception in action tooltip detour");
             }
@@ -133,12 +165,21 @@ namespace XivCommon.Functions.Tooltips {
             return this.ActionGenerateTooltipHook!.Original(addon, numberArrayData, stringArrayData);
         }
 
-        private unsafe IntPtr ActionGenerateTooltipDetourInner(IntPtr addon, int** numberArrayData, byte*** stringArrayData) {
-            this.ActionTooltip = new ActionTooltip(this.SeStringManager, this.SadSetString!, stringArrayData, numberArrayData);
+        private unsafe void ActionGenerateTooltipDetourInner(int** numberArrayData, byte*** stringArrayData) {
+            var action = this.GameGui.HoveredAction;
+            if (this.ActionStateChanged || this.LastAction != action) {
+                this.ActionStateChanged = false;
 
-            this.OnActionTooltip?.Invoke(this.ActionTooltip, this.GameGui.HoveredAction);
+                this.ActionTooltip = new ActionTooltip(this.SeStringManager, this.SadSetString!, stringArrayData, numberArrayData);
 
-            return this.ActionGenerateTooltipHook!.Original(addon, numberArrayData, stringArrayData);
+                try {
+                    this.OnActionTooltip?.Invoke(this.ActionTooltip, action);
+                } catch (Exception ex) {
+                    Logger.LogError(ex, "Exception in OnActionTooltip event");
+                }
+            }
+
+            this.LastAction = action;
         }
     }
 }

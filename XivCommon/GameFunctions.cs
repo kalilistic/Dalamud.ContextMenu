@@ -85,7 +85,7 @@ namespace XivCommon {
             this.Talk = new Talk(scanner, seStringManager, hooks.HasFlag(Hooks.Talk));
             this.ChatBubbles = new ChatBubbles(dalamud, scanner, seStringManager, hooks.HasFlag(Hooks.ChatBubbles));
             this.ContextMenu = new ContextMenu(this, scanner, @interface.Framework.Gui, @interface.ClientState.ClientLanguage, hooks);
-            this.Tooltips = new Tooltips(scanner, @interface.Framework.Gui, seStringManager, hooks.HasFlag(Hooks.Tooltips));
+            this.Tooltips = new Tooltips(scanner, @interface.Framework, @interface.Framework.Gui, seStringManager, hooks.HasFlag(Hooks.Tooltips));
 
             if (scanner.TryScanText(Signatures.GetAgentByInternalId, out var byInternalIdPtr, "GetAgentByInternalId")) {
                 this.GetAgentByInternalIdInternal = Marshal.GetDelegateForFunctionPointer<GetAgentByInternalIdDelegate>(byInternalIdPtr);
