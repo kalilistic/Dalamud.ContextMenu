@@ -12,20 +12,24 @@ namespace XivCommon.Functions.Tooltips {
     /// </summary>
     public class Tooltips : IDisposable {
         private static class Signatures {
-            internal const string ItemGenerateTooltip = "48 89 5C 24 ?? 55 56 57 41 54 41 55 41 56 41 57 48 83 EC 50 48 8B 42 ??";
-            internal const string ActionGenerateTooltip = "E8 ?? ?? ?? ?? 48 8B D5 48 8B CF E8 ?? ?? ?? ?? 41 8D 45 FF 83 F8 01 77 6D";
+            internal const string AgentItemDetailUpdateTooltip = "E8 ?? ?? ?? ?? 48 8B 5C 24 ?? 48 89 AE ?? ?? ?? ??";
+            internal const string AgentActionDetailUpdateTooltip = "E8 ?? ?? ?? ?? EB 68 FF 50 40";
             internal const string SadSetString = "E8 ?? ?? ?? ?? F6 47 14 08";
         }
 
+        // Updated: 5.5
+        // E8 ?? ?? ?? ?? EB 68 FF 50 40
+        private const int AgentActionDetailUpdateFlagOffset = 0x58;
+
         internal unsafe delegate void StringArrayDataSetStringDelegate(IntPtr self, int index, byte* str, byte updatePtr, byte copyToUi, byte dontSetModified);
 
-        private unsafe delegate IntPtr ItemGenerateTooltipDelegate(IntPtr addon, int** numberArrayData, byte*** stringArrayData);
+        private unsafe delegate byte ItemUpdateTooltipDelegate(IntPtr agent, int** numberArrayData, byte*** stringArrayData, float a4);
 
-        private unsafe delegate IntPtr ActionGenerateTooltipDelegate(IntPtr addon, int** numberArrayData, byte*** stringArrayData);
+        private unsafe delegate void ActionUpdateTooltipDelegate(IntPtr agent, int** numberArrayData, byte*** stringArrayData);
 
         private StringArrayDataSetStringDelegate? SadSetString { get; }
-        private Hook<ItemGenerateTooltipDelegate>? ItemGenerateTooltipHook { get; }
-        private Hook<ActionGenerateTooltipDelegate>? ActionGenerateTooltipHook { get; }
+        private Hook<ItemUpdateTooltipDelegate>? ItemUpdateTooltipHook { get; }
+        private Hook<ActionUpdateTooltipDelegate>? ActionGenerateTooltipHook { get; }
 
         /// <summary>
         /// The delegate for item tooltip events.
@@ -63,14 +67,6 @@ namespace XivCommon.Functions.Tooltips {
         private ItemTooltip? ItemTooltip { get; set; }
         private ActionTooltip? ActionTooltip { get; set; }
 
-        private ulong LastItem { get; set; }
-        private bool ItemVisible { get; set; }
-        private bool ItemStateChanged { get; set; } = true;
-
-        private HoveredAction? LastAction { get; set; }
-        private bool ActionVisible { get; set; }
-        private bool ActionStateChanged { get; set; } = true;
-
         internal Tooltips(SigScanner scanner, Framework framework, GameGui gui, SeStringManager manager, bool enabled) {
             this.Framework = framework;
             this.GameGui = gui;
@@ -86,19 +82,17 @@ namespace XivCommon.Functions.Tooltips {
                 return;
             }
 
-            this.Framework.OnUpdateEvent += this.OnFrameworkUpdate;
-
-            if (scanner.TryScanText(Signatures.ItemGenerateTooltip, out var generateItemPtr, "Tooltips - Items")) {
+            if (scanner.TryScanText(Signatures.AgentItemDetailUpdateTooltip, out var updateItemPtr, "Tooltips - Items")) {
                 unsafe {
-                    this.ItemGenerateTooltipHook = new Hook<ItemGenerateTooltipDelegate>(generateItemPtr, new ItemGenerateTooltipDelegate(this.ItemGenerateTooltipDetour));
+                    this.ItemUpdateTooltipHook = new Hook<ItemUpdateTooltipDelegate>(updateItemPtr, new ItemUpdateTooltipDelegate(this.ItemUpdateTooltipDetour));
                 }
 
-                this.ItemGenerateTooltipHook.Enable();
+                this.ItemUpdateTooltipHook.Enable();
             }
 
-            if (scanner.TryScanText(Signatures.ActionGenerateTooltip, out var actionItemPtr, "Tooltips - Actions")) {
+            if (scanner.TryScanText(Signatures.AgentActionDetailUpdateTooltip, out var updateActionPtr, "Tooltips - Actions")) {
                 unsafe {
-                    this.ActionGenerateTooltipHook = new Hook<ActionGenerateTooltipDelegate>(actionItemPtr, new ActionGenerateTooltipDelegate(this.ActionGenerateTooltipDetour));
+                    this.ActionGenerateTooltipHook = new Hook<ActionUpdateTooltipDelegate>(updateActionPtr, new ActionUpdateTooltipDelegate(this.ActionUpdateTooltipDetour));
                 }
 
                 this.ActionGenerateTooltipHook.Enable();
@@ -108,78 +102,56 @@ namespace XivCommon.Functions.Tooltips {
         /// <inheritdoc />
         public void Dispose() {
             this.ActionGenerateTooltipHook?.Dispose();
-            this.ItemGenerateTooltipHook?.Dispose();
-            this.Framework.OnUpdateEvent -= this.OnFrameworkUpdate;
+            this.ItemUpdateTooltipHook?.Dispose();
         }
 
-        private void OnFrameworkUpdate(Framework framework) {
-            var itemVisible = framework.Gui.GetAddonByName("ItemDetail", 1)?.Visible ?? false;
-            var actionVisible = framework.Gui.GetAddonByName("ActionDetail", 1)?.Visible ?? false;
+        private unsafe byte ItemUpdateTooltipDetour(IntPtr agent, int** numberArrayData, byte*** stringArrayData, float a4) {
+            var ret = this.ItemUpdateTooltipHook!.Original(agent, numberArrayData, stringArrayData, a4);
 
-            if (itemVisible != this.ItemVisible) {
-                this.ItemStateChanged = true;
-            }
-
-            if (actionVisible != this.ActionVisible) {
-                this.ActionStateChanged = true;
-            }
-
-            this.ItemVisible = itemVisible;
-            this.ActionVisible = actionVisible;
-        }
-
-        private unsafe IntPtr ItemGenerateTooltipDetour(IntPtr addon, int** numberArrayData, byte*** stringArrayData) {
-            try {
-                this.ItemGenerateTooltipDetourInner(numberArrayData, stringArrayData);
-            } catch (Exception ex) {
-                Logger.LogError(ex, "Exception in item tooltip detour");
-            }
-
-            return this.ItemGenerateTooltipHook!.Original(addon, numberArrayData, stringArrayData);
-        }
-
-        private unsafe void ItemGenerateTooltipDetourInner(int** numberArrayData, byte*** stringArrayData) {
-            var itemId = this.GameGui.HoveredItem;
-            if (this.ItemStateChanged || this.LastItem != itemId) {
-                this.ItemStateChanged = false;
-
-                this.ItemTooltip = new ItemTooltip(this.SeStringManager, this.SadSetString!, stringArrayData, numberArrayData);
-
+            if (ret > 0) {
                 try {
-                    this.OnItemTooltip?.Invoke(this.ItemTooltip, itemId);
+                    this.ItemUpdateTooltipDetourInner(numberArrayData, stringArrayData);
                 } catch (Exception ex) {
-                    Logger.LogError(ex, "Exception in OnItemTooltip event");
+                    Logger.LogError(ex, "Exception in item tooltip detour");
                 }
             }
 
-            this.LastItem = itemId;
+            return ret;
         }
 
-        private unsafe IntPtr ActionGenerateTooltipDetour(IntPtr addon, int** numberArrayData, byte*** stringArrayData) {
+        private unsafe void ItemUpdateTooltipDetourInner(int** numberArrayData, byte*** stringArrayData) {
+            this.ItemTooltip = new ItemTooltip(this.SeStringManager, this.SadSetString!, stringArrayData, numberArrayData);
+
             try {
-                this.ActionGenerateTooltipDetourInner(numberArrayData, stringArrayData);
+                this.OnItemTooltip?.Invoke(this.ItemTooltip, this.GameGui.HoveredItem);
+            } catch (Exception ex) {
+                Logger.LogError(ex, "Exception in OnItemTooltip event");
+            }
+        }
+
+        private unsafe void ActionUpdateTooltipDetour(IntPtr agent, int** numberArrayData, byte*** stringArrayData) {
+            var flag = *(byte*) (agent + AgentActionDetailUpdateFlagOffset);
+            this.ActionGenerateTooltipHook!.Original(agent, numberArrayData, stringArrayData);
+
+            if (flag == 0) {
+                return;
+            }
+
+            try {
+                this.ActionUpdateTooltipDetourInner(numberArrayData, stringArrayData);
             } catch (Exception ex) {
                 Logger.LogError(ex, "Exception in action tooltip detour");
             }
-
-            return this.ActionGenerateTooltipHook!.Original(addon, numberArrayData, stringArrayData);
         }
 
-        private unsafe void ActionGenerateTooltipDetourInner(int** numberArrayData, byte*** stringArrayData) {
-            var action = this.GameGui.HoveredAction;
-            if (this.ActionStateChanged || this.LastAction != action) {
-                this.ActionStateChanged = false;
+        private unsafe void ActionUpdateTooltipDetourInner(int** numberArrayData, byte*** stringArrayData) {
+            this.ActionTooltip = new ActionTooltip(this.SeStringManager, this.SadSetString!, stringArrayData, numberArrayData);
 
-                this.ActionTooltip = new ActionTooltip(this.SeStringManager, this.SadSetString!, stringArrayData, numberArrayData);
-
-                try {
-                    this.OnActionTooltip?.Invoke(this.ActionTooltip, action);
-                } catch (Exception ex) {
-                    Logger.LogError(ex, "Exception in OnActionTooltip event");
-                }
+            try {
+                this.OnActionTooltip?.Invoke(this.ActionTooltip, this.GameGui.HoveredAction);
+            } catch (Exception ex) {
+                Logger.LogError(ex, "Exception in OnActionTooltip event");
             }
-
-            this.LastAction = action;
         }
     }
 }
