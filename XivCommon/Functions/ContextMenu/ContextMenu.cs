@@ -20,6 +20,7 @@ namespace XivCommon.Functions.ContextMenu {
         private static class Signatures {
             internal const string ContextMenuOpen = "48 8B C4 57 41 56 41 57 48 81 EC ?? ?? ?? ??";
             internal const string ContextMenuSelected = "48 89 5C 24 ?? 55 57 41 56 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 44 24 ?? 80 B9 ?? ?? ?? ?? ??";
+            internal const string TitleContextMenuOpen = "48 8B C4 57 41 55 41 56 48 81 EC ?? ?? ?? ??";
             internal const string AtkValueChangeType = "E8 ?? ?? ?? ?? 45 84 F6 48 8D 4C 24 ??";
             internal const string AtkValueSetString = "E8 ?? ?? ?? ?? 41 03 ED";
             internal const string GetAddonByInternalId = "E8 ?? ?? ?? ?? 8B 6B 20";
@@ -109,6 +110,7 @@ namespace XivCommon.Functions.ContextMenu {
         private readonly GetAddonByInternalIdDelegate _getAddonByInternalId = null!;
 
         private Hook<ContextMenuOpenDelegate>? ContextMenuOpenHook { get; }
+        private Hook<ContextMenuOpenDelegate>? TitleContextMenuOpenHook { get; }
 
         private delegate byte ContextMenuItemSelectedInternalDelegate(IntPtr addon, int index, byte a3);
 
@@ -169,12 +171,26 @@ namespace XivCommon.Functions.ContextMenu {
                 this.ContextMenuItemSelectedHook = new Hook<ContextMenuItemSelectedInternalDelegate>(selectedPtr, new ContextMenuItemSelectedInternalDelegate(this.ItemSelectedDetour));
                 this.ContextMenuItemSelectedHook.Enable();
             }
+
+            if (scanner.TryScanText(Signatures.TitleContextMenuOpen, out var titleOpenPtr, "Context Menu (title menu open)")) {
+                unsafe {
+                    this.TitleContextMenuOpenHook = new Hook<ContextMenuOpenDelegate>(titleOpenPtr, new ContextMenuOpenDelegate(this.TitleContextMenuOpenDetour));
+                }
+
+                this.TitleContextMenuOpenHook.Enable();
+            }
         }
 
         /// <inheritdoc />
         public void Dispose() {
             this.ContextMenuOpenHook?.Dispose();
+            this.TitleContextMenuOpenHook?.Enable();
             this.ContextMenuItemSelectedHook?.Dispose();
+        }
+
+        private unsafe byte TitleContextMenuOpenDetour(IntPtr addon, int menuSize, AtkValue* atkValueArgs) {
+            this.Items.Clear();
+            return this.TitleContextMenuOpenHook!.Original(addon, menuSize, atkValueArgs);
         }
 
         private (bool isInventory, IntPtr agent) GetContextMenuAgent() {
