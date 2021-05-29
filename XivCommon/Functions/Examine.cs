@@ -46,7 +46,7 @@ namespace XivCommon.Functions {
                 throw new InvalidOperationException("Could not find signature for Examine function");
             }
 
-            // NOTES LAST UPDATED: 5.45
+            // NOTES LAST UPDATED: 5.55
 
             // offsets and stuff come from the beginning of case 0x2c (around line 621 in IDA)
             // if 29f8 ever changes, I'd just scan for it in old binary and find what it is in the new binary at the same spot

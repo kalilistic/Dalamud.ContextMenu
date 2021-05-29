@@ -17,7 +17,7 @@ namespace XivCommon.Functions.Tooltips {
             internal const string SadSetString = "E8 ?? ?? ?? ?? F6 47 14 08";
         }
 
-        // Updated: 5.5
+        // Updated: 5.55
         // E8 ?? ?? ?? ?? EB 68 FF 50 40
         private const int AgentActionDetailUpdateFlagOffset = 0x58;
 
