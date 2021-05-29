@@ -5,7 +5,6 @@ using Dalamud.Game;
 using Dalamud.Game.Internal.Gui;
 using Dalamud.Game.Internal.Gui.Structs;
 using Dalamud.Hooking;
-using Dalamud.Plugin;
 
 namespace XivCommon.Functions {
     /// <summary>
@@ -66,6 +65,10 @@ namespace XivCommon.Functions {
             this.ListingsEnabled = hooks.HasFlag(Hooks.PartyFinderListings);
             this.JoinsEnabled = hooks.HasFlag(Hooks.PartyFinderJoins);
 
+            if (this.ListingsEnabled || this.JoinsEnabled) {
+                this.PartyFinderGui.ReceiveListing += this.ReceiveListing;
+            }
+
             if (scanner.TryScanText(Signatures.RequestListings, out var requestPfPtr, "Party Finder listings")) {
                 this.RequestPartyFinderListings = Marshal.GetDelegateForFunctionPointer<RequestPartyFinderListingsDelegate>(requestPfPtr);
 
@@ -78,8 +81,6 @@ namespace XivCommon.Functions {
             if (this.JoinsEnabled && scanner.TryScanText(Signatures.JoinCrossParty, out var joinPtr, "Party Finder joins")) {
                 this.JoinPfHook = new Hook<JoinPfDelegate>(joinPtr, new JoinPfDelegate(this.JoinPfDetour));
                 this.JoinPfHook.Enable();
-
-                this.PartyFinderGui.ReceiveListing += this.ReceiveListing;
             }
         }
 
