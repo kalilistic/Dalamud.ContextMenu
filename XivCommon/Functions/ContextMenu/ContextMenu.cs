@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using Dalamud;
@@ -210,12 +211,23 @@ namespace XivCommon.Functions.ContextMenu {
             return (itemId, itemAmount, itemHq);
         }
 
+        [HandleProcessCorruptedStateExceptions]
         private unsafe byte OpenMenuDetour(IntPtr addon, int menuSize, AtkValue* atkValueArgs) {
+            try {
+                this.OpenMenuDetourInner(addon, ref menuSize, atkValueArgs);
+            } catch (Exception ex) {
+                Logger.LogError(ex, "Exception in OpenMenuDetour");
+            }
+
+            return this.ContextMenuOpenHook!.Original(addon, menuSize, atkValueArgs);
+        }
+
+        private unsafe void OpenMenuDetourInner(IntPtr addon, ref int menuSize, AtkValue* atkValueArgs) {
             this.Items.Clear();
 
             var (inventory, agent) = this.GetContextMenuAgent();
             if (agent == IntPtr.Zero) {
-                goto Original;
+                return;
             }
 
             this.NormalSize = (int) (&atkValueArgs[0])->UInt;
@@ -263,7 +275,7 @@ namespace XivCommon.Functions.ContextMenu {
                     this.OpenInventoryContextMenu?.Invoke(args);
                 } catch (Exception ex) {
                     Logger.LogError(ex, "Exception in OpenMenuDetour");
-                    goto Original;
+                    return;
                 }
 
                 // remove any NormalContextMenuItems that may have been added - these will crash the game
@@ -295,7 +307,7 @@ namespace XivCommon.Functions.ContextMenu {
                     this.OpenContextMenu?.Invoke(args);
                 } catch (Exception ex) {
                     Logger.LogError(ex, "Exception in OpenMenuDetour");
-                    goto Original;
+                    return;
                 }
 
                 // remove any InventoryContextMenuItems that may have been added - these will crash the game
@@ -371,9 +383,6 @@ namespace XivCommon.Functions.ContextMenu {
             }
 
             menuSize += 7;
-
-            Original:
-            return this.ContextMenuOpenHook!.Original(addon, menuSize, atkValueArgs);
         }
 
         private byte ItemSelectedDetour(IntPtr addon, int index, byte a3) {
