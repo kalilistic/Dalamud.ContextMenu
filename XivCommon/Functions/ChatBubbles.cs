@@ -122,7 +122,7 @@ namespace XivCommon.Functions {
             }
         }
 
-        private unsafe void UpdateChatBubbleDetourInner(IntPtr bubblePtr, IntPtr actorPtr) {
+        private void UpdateChatBubbleDetourInner(IntPtr bubblePtr, IntPtr actorPtr) {
             // var bubble = (ChatBubble*) bubblePtr;
             var actorStruct = Marshal.PtrToStructure<Dalamud.Game.ClientState.Structs.Actor>(actorPtr);
             var actor = new Actor(actorPtr, actorStruct, this.Dalamud);
