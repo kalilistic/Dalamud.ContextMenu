@@ -60,6 +60,7 @@ namespace XivCommon.Functions.ContextMenu {
         private const int ItemHqOffset = 0x604;
 
         private const byte NoopContextId = 0x67;
+        private const byte InventoryNoopContextId = 0xFF;
 
         #endregion
 
@@ -360,7 +361,7 @@ namespace XivCommon.Functions.ContextMenu {
                 // set up the agent to take the appropriate action for this item
                 *(menuActions + 7 + i) = item switch {
                     NativeContextMenuItem nativeItem => nativeItem.InternalAction,
-                    _ => inventory ? (byte) 0xFF : NoopContextId,
+                    _ => inventory ? InventoryNoopContextId : NoopContextId,
                 };
 
                 // set up the menu item
