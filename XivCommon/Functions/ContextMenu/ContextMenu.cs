@@ -59,6 +59,7 @@ namespace XivCommon.Functions.ContextMenu {
         private const int ItemAmountOffset = 0x5FC;
         private const int ItemHqOffset = 0x604;
 
+        // Found in the first function in the agent's vtable
         private const byte NoopContextId = 0x67;
         private const byte InventoryNoopContextId = 0xFF;
 
@@ -242,6 +243,8 @@ namespace XivCommon.Functions.ContextMenu {
         private unsafe void OpenMenuDetourInner(IntPtr addon, ref int menuSize, AtkValue* atkValueArgs) {
             this.Items.Clear();
 
+            const int offset = 7;
+
             var (inventory, agent) = this.GetContextMenuAgent();
             if (agent == IntPtr.Zero) {
                 return;
@@ -249,7 +252,7 @@ namespace XivCommon.Functions.ContextMenu {
 
             this.NormalSize = (int) (&atkValueArgs[0])->UInt;
 
-            var hasGameDisabled = menuSize - 7 - this.NormalSize > 0;
+            var hasGameDisabled = menuSize - offset - this.NormalSize > 0;
 
             var addonName = this.GetParentAddonName(addon);
 
@@ -259,18 +262,18 @@ namespace XivCommon.Functions.ContextMenu {
 
             var nativeItems = new List<NativeContextMenuItem>();
             for (var i = 0; i < this.NormalSize; i++) {
-                var atkItem = &atkValueArgs[7 + i];
+                var atkItem = &atkValueArgs[offset + i];
 
                 var nameBytes = Util.ReadTerminated((IntPtr) atkItem->String);
                 var name = Encoding.UTF8.GetString(nameBytes);
 
                 var enabled = true;
                 if (hasGameDisabled) {
-                    var disabledItem = &atkValueArgs[7 + this.NormalSize + i];
+                    var disabledItem = &atkValueArgs[offset + this.NormalSize + i];
                     enabled = disabledItem->Int == 0;
                 }
 
-                var action = *(menuActions + 7 + i);
+                var action = *(menuActions + offset + i);
 
                 nativeItems.Add(new NativeContextMenuItem(action, name, enabled));
             }
@@ -353,19 +356,19 @@ namespace XivCommon.Functions.ContextMenu {
                 var item = this.Items[i];
 
                 if (hasAnyDisabled) {
-                    var disabledArg = &atkValueArgs[7 + this.Items.Count + i];
+                    var disabledArg = &atkValueArgs[offset + this.Items.Count + i];
                     this._atkValueChangeType(disabledArg, ValueType.Int);
                     disabledArg->Int = item.Enabled ? 0 : 1;
                 }
 
                 // set up the agent to take the appropriate action for this item
-                *(menuActions + 7 + i) = item switch {
+                *(menuActions + offset + i) = item switch {
                     NativeContextMenuItem nativeItem => nativeItem.InternalAction,
                     _ => inventory ? InventoryNoopContextId : NoopContextId,
                 };
 
                 // set up the menu item
-                var newItem = &atkValueArgs[7 + i];
+                var newItem = &atkValueArgs[offset + i];
                 this._atkValueChangeType(newItem, ValueType.String);
 
                 var name = item switch {
@@ -399,7 +402,7 @@ namespace XivCommon.Functions.ContextMenu {
                 menuSize *= 2;
             }
 
-            menuSize += 7;
+            menuSize += offset;
         }
 
         private byte ItemSelectedDetour(IntPtr addon, int index, byte a3) {
