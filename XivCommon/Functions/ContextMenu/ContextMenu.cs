@@ -18,6 +18,7 @@ namespace XivCommon.Functions.ContextMenu {
     /// </summary>
     public class ContextMenu : IDisposable {
         private static class Signatures {
+            internal const string SomeOpenAddonThing = "E8 ?? ?? ?? ?? 0F B7 C0 48 83 C4 60";
             internal const string ContextMenuOpen = "48 8B C4 57 41 56 41 57 48 81 EC ?? ?? ?? ??";
             internal const string ContextMenuSelected = "48 89 5C 24 ?? 55 57 41 56 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 44 24 ?? 80 B9 ?? ?? ?? ?? ??";
             internal const string TitleContextMenuOpen = "48 8B C4 57 41 55 41 56 48 81 EC ?? ?? ?? ??";
@@ -65,6 +66,8 @@ namespace XivCommon.Functions.ContextMenu {
 
         #endregion
 
+        // 82C570 called when you click on a title menu context item
+
         /// <summary>
         /// The delegate for context menu events.
         /// </summary>
@@ -105,6 +108,10 @@ namespace XivCommon.Functions.ContextMenu {
         /// </summary>
         public delegate void InventoryContextMenuItemSelectedDelegate(InventoryContextMenuItemSelectedArgs args);
 
+        private delegate IntPtr SomeOpenAddonThingDelegate(IntPtr a1, IntPtr a2, IntPtr a3, uint a4, IntPtr a5, IntPtr a6, IntPtr a7, ushort a8);
+
+        private Hook<SomeOpenAddonThingDelegate>? SomeOpenAddonThingHook { get; }
+
         private unsafe delegate byte ContextMenuOpenDelegate(IntPtr addon, int menuSize, AtkValue* atkValueArgs);
 
         private delegate IntPtr GetAddonByInternalIdDelegate(IntPtr raptureAtkUnitManager, short id);
@@ -129,6 +136,7 @@ namespace XivCommon.Functions.ContextMenu {
         private GameFunctions Functions { get; }
         private ClientLanguage Language { get; }
         private GameGui Gui { get; }
+        private IntPtr Agent { get; set; } = IntPtr.Zero;
         private List<BaseContextMenuItem> Items { get; } = new();
         private int NormalSize { get; set; }
 
@@ -159,6 +167,13 @@ namespace XivCommon.Functions.ContextMenu {
                 return;
             }
 
+            if (scanner.TryScanText(Signatures.SomeOpenAddonThing, out var thingPtr, "Context Menu (some OpenAddon thing)")) {
+                this.SomeOpenAddonThingHook = new Hook<SomeOpenAddonThingDelegate>(thingPtr, new SomeOpenAddonThingDelegate(this.SomeOpenAddonThingDetour));
+                this.SomeOpenAddonThingHook.Enable();
+            } else {
+                return;
+            }
+
             if (scanner.TryScanText(Signatures.ContextMenuOpen, out var openPtr, "Context Menu open")) {
                 unsafe {
                     this.ContextMenuOpenHook = new Hook<ContextMenuOpenDelegate>(openPtr, new ContextMenuOpenDelegate(this.OpenMenuDetour));
@@ -185,9 +200,15 @@ namespace XivCommon.Functions.ContextMenu {
 
         /// <inheritdoc />
         public void Dispose() {
+            this.SomeOpenAddonThingHook?.Dispose();
             this.ContextMenuOpenHook?.Dispose();
             this.TitleContextMenuOpenHook?.Enable();
             this.ContextMenuItemSelectedHook?.Dispose();
+        }
+
+        private IntPtr SomeOpenAddonThingDetour(IntPtr a1, IntPtr a2, IntPtr a3, uint a4, IntPtr a5, IntPtr a6, IntPtr a7, ushort a8) {
+            this.Agent = a6;
+            return this.SomeOpenAddonThingHook!.Original(a1, a2, a3, a4, a5, a6, a7, a8);
         }
 
         private unsafe byte TitleContextMenuOpenDetour(IntPtr addon, int menuSize, AtkValue* atkValueArgs) {
@@ -195,11 +216,21 @@ namespace XivCommon.Functions.ContextMenu {
             return this.TitleContextMenuOpenHook!.Original(addon, menuSize, atkValueArgs);
         }
 
-        private (bool isInventory, IntPtr agent) GetContextMenuAgent() {
-            var isInventory = this.Gui.HoveredItem > 0;
-            var agentId = isInventory ? 10u : 9u;
-            var agent = this.Functions.GetAgentByInternalId(agentId);
-            return (isInventory, agent);
+        private enum AgentType {
+            Normal,
+            Inventory,
+            Unknown,
+        }
+
+        private (AgentType agentType, IntPtr agent) GetContextMenuAgent() {
+            var agentType = AgentType.Unknown;
+            if (this.Agent == this.Functions.GetAgentByInternalId(9u)) {
+                agentType = AgentType.Normal;
+            } else if (this.Agent == this.Functions.GetAgentByInternalId(10u)) {
+                agentType = AgentType.Inventory;
+            }
+
+            return (agentType, this.Agent);
         }
 
         private unsafe string? GetParentAddonName(IntPtr addon) {
@@ -245,10 +276,16 @@ namespace XivCommon.Functions.ContextMenu {
 
             const int offset = 7;
 
-            var (inventory, agent) = this.GetContextMenuAgent();
+            var (agentType, agent) = this.GetContextMenuAgent();
             if (agent == IntPtr.Zero) {
                 return;
             }
+
+            if (agentType == AgentType.Unknown) {
+                return;
+            }
+
+            var inventory = agentType == AgentType.Inventory;
 
             this.NormalSize = (int) (&atkValueArgs[0])->UInt;
 
