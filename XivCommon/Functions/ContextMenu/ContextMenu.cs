@@ -256,7 +256,7 @@ namespace XivCommon.Functions.ContextMenu {
         private static unsafe (uint itemId, uint itemAmount, bool itemHq) GetInventoryAgentInfo(IntPtr agent) {
             var itemId = *(uint*) (agent + ItemIdOffset);
             var itemAmount = *(uint*) (agent + ItemAmountOffset);
-            var itemHq = (*(byte*) (agent + ItemHqOffset)) == 1;
+            var itemHq = *(byte*) (agent + ItemHqOffset) == 1;
             return (itemId, itemAmount, itemHq);
         }
 
