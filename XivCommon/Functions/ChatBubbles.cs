@@ -95,8 +95,7 @@ namespace XivCommon.Functions {
             var actorStruct = Marshal.PtrToStructure<Dalamud.Game.ClientState.Structs.Actor>(actorPtr);
             var actor = new Actor(actorPtr, actorStruct, this.Dalamud);
 
-            var rawText = Util.ReadTerminated(textPtr);
-            var text = this.SeStringManager.Parse(rawText);
+            var text = Util.ReadSeString(textPtr, this.SeStringManager);
 
             try {
                 this.OnChatBubble?.Invoke(ref actor, ref text);
