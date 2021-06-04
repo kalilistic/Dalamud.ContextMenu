@@ -1,4 +1,5 @@
 ﻿using System;
+using Dalamud.Game.Text.SeStringHandling;
 
 namespace XivCommon.Functions.ContextMenu {
     /// <summary>
@@ -33,14 +34,14 @@ namespace XivCommon.Functions.ContextMenu {
         /// <summary>
         /// The text related to this context menu, usually an actor name.
         /// </summary>
-        public string? Text { get; }
+        public SeString? Text { get; }
 
         /// <summary>
         /// The world of the actor this context menu is for, if any.
         /// </summary>
         public ushort ActorWorld { get; }
 
-        internal BaseContextMenuArgs(IntPtr addon, IntPtr agent, string? parentAddonName, uint actorId, uint contentIdLower, string? text, ushort actorWorld) {
+        internal BaseContextMenuArgs(IntPtr addon, IntPtr agent, string? parentAddonName, uint actorId, uint contentIdLower, SeString? text, ushort actorWorld) {
             this.Addon = addon;
             this.Agent = agent;
             this.ParentAddonName = parentAddonName;

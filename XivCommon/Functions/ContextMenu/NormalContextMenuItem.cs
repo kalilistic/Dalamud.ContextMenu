@@ -1,4 +1,6 @@
-﻿namespace XivCommon.Functions.ContextMenu {
+﻿using Dalamud.Game.Text.SeStringHandling;
+
+namespace XivCommon.Functions.ContextMenu {
     /// <summary>
     /// A custom normal context menu item
     /// </summary>
@@ -11,7 +13,7 @@
         /// </summary>
         /// <param name="name">the English name of the item, copied to other languages</param>
         /// <param name="action">the action to perform on click</param>
-        public NormalContextMenuItem(string name, ContextMenu.ContextMenuItemSelectedDelegate action) : base(name, action) {
+        public NormalContextMenuItem(SeString name, ContextMenu.ContextMenuItemSelectedDelegate action) : base(name, action) {
         }
     }
 }

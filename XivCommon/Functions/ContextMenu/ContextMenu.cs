@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Dalamud;
 using Dalamud.Game;
-using Dalamud.Game.Internal.Gui;
+using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Hooking;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using XivCommon.Functions.ContextMenu.Inventory;
@@ -135,15 +135,15 @@ namespace XivCommon.Functions.ContextMenu {
 
         private GameFunctions Functions { get; }
         private ClientLanguage Language { get; }
-        private GameGui Gui { get; }
+        private SeStringManager SeStringManager { get; }
         private IntPtr Agent { get; set; } = IntPtr.Zero;
         private List<BaseContextMenuItem> Items { get; } = new();
         private int NormalSize { get; set; }
 
-        internal ContextMenu(GameFunctions functions, SigScanner scanner, GameGui gui, ClientLanguage language, Hooks hooks) {
+        internal ContextMenu(GameFunctions functions, SigScanner scanner, SeStringManager manager, ClientLanguage language, Hooks hooks) {
             this.Functions = functions;
             this.Language = language;
-            this.Gui = gui;
+            this.SeStringManager = manager;
 
             if (!hooks.HasFlag(Hooks.ContextMenu)) {
                 return;
@@ -244,11 +244,11 @@ namespace XivCommon.Functions.ContextMenu {
             return Encoding.UTF8.GetString(Util.ReadTerminated(parentAddon + 8));
         }
 
-        private static unsafe (uint actorId, uint contentIdLower, string? text, ushort actorWorld) GetAgentInfo(IntPtr agent) {
+        private unsafe (uint actorId, uint contentIdLower, SeString? text, ushort actorWorld) GetAgentInfo(IntPtr agent) {
             var actorId = *(uint*) (agent + ActorIdOffset);
             var contentIdLower = *(uint*) (agent + ContentIdLowerOffset);
             var textBytes = Util.ReadTerminated(Marshal.ReadIntPtr(agent + TextPointerOffset));
-            var text = textBytes.Length == 0 ? null : Encoding.UTF8.GetString(textBytes);
+            var text = textBytes.Length == 0 ? null : this.SeStringManager.Parse(textBytes);
             var actorWorld = *(ushort*) (agent + WorldOffset);
             return (actorId, contentIdLower, text, actorWorld);
         }
@@ -301,8 +301,7 @@ namespace XivCommon.Functions.ContextMenu {
             for (var i = 0; i < this.NormalSize; i++) {
                 var atkItem = &atkValueArgs[offset + i];
 
-                var nameBytes = Util.ReadTerminated((IntPtr) atkItem->String);
-                var name = Encoding.UTF8.GetString(nameBytes);
+                var name = Util.ReadSeString((IntPtr) atkItem->String, this.SeStringManager);
 
                 var enabled = true;
                 if (hasGameDisabled) {
@@ -347,7 +346,7 @@ namespace XivCommon.Functions.ContextMenu {
 
                 this.Items.AddRange(args.Items);
             } else {
-                var info = GetAgentInfo(agent);
+                var info = this.GetAgentInfo(agent);
 
                 var args = new ContextMenuOpenArgs(
                     addon,
@@ -426,7 +425,7 @@ namespace XivCommon.Functions.ContextMenu {
                     NativeContextMenuItem native => native.Name,
                     _ => "Invalid context menu item",
                 };
-                var nameBytes = Encoding.UTF8.GetBytes(name).Terminate();
+                var nameBytes = name.Encode().Terminate();
                 fixed (byte* nameBytesPtr = nameBytes) {
                     this._atkValueSetString(newItem, nameBytesPtr);
                 }
@@ -452,7 +451,7 @@ namespace XivCommon.Functions.ContextMenu {
                 // a custom item is being clicked
                 case NormalContextMenuItem custom: {
                     var addonName = this.GetParentAddonName(addon);
-                    var info = GetAgentInfo(custom.Agent);
+                    var info = this.GetAgentInfo(custom.Agent);
 
                     var args = new ContextMenuItemSelectedArgs(
                         addon,

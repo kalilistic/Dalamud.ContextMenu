@@ -1,4 +1,6 @@
-﻿namespace XivCommon.Functions.ContextMenu {
+﻿using Dalamud.Game.Text.SeStringHandling;
+
+namespace XivCommon.Functions.ContextMenu {
     /// <summary>
     /// A native context menu item
     /// </summary>
@@ -11,9 +13,9 @@
         /// <summary>
         /// The name of the context item.
         /// </summary>
-        public string Name { get; set; }
+        public SeString Name { get; set; }
 
-        internal NativeContextMenuItem(byte action, string name, bool enabled) {
+        internal NativeContextMenuItem(byte action, SeString name, bool enabled) {
             this.Name = name;
             this.InternalAction = action;
             this.Enabled = enabled;

@@ -1,4 +1,6 @@
-﻿namespace XivCommon.Functions.ContextMenu.Inventory {
+﻿using Dalamud.Game.Text.SeStringHandling;
+
+namespace XivCommon.Functions.ContextMenu.Inventory {
     /// <summary>
     /// A custom context menu item for inventory items.
     /// </summary>
@@ -8,7 +10,7 @@
         /// </summary>
         /// <param name="name">the English name of the item, copied to other languages</param>
         /// <param name="action">the action to perform on click</param>
-        public InventoryContextMenuItem(string name, ContextMenu.InventoryContextMenuItemSelectedDelegate action) : base(name, action) {
+        public InventoryContextMenuItem(SeString name, ContextMenu.InventoryContextMenuItemSelectedDelegate action) : base(name, action) {
         }
     }
 }
