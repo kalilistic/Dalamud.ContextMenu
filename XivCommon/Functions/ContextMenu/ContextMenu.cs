@@ -18,6 +18,9 @@ namespace XivCommon.Functions.ContextMenu {
     /// </summary>
     public class ContextMenu : IDisposable {
         private static class Signatures {
+            internal const string GameAlloc = "E8 ?? ?? ?? ?? 45 8D 67 23";
+            internal const string GameFree = "E8 ?? ?? ?? ?? 4C 89 7B 60";
+            internal const string GetGameAllocator = "E8 ?? ?? ?? ?? 8B 75 08";
             internal const string SomeOpenAddonThing = "E8 ?? ?? ?? ?? 0F B7 C0 48 83 C4 60";
             internal const string ContextMenuOpen = "48 8B C4 57 41 56 41 57 48 81 EC ?? ?? ?? ??";
             internal const string ContextMenuSelected = "48 89 5C 24 ?? 55 57 41 56 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 44 24 ?? 80 B9 ?? ?? ?? ?? ??";
@@ -35,6 +38,11 @@ namespace XivCommon.Functions.ContextMenu {
         /// Offset from addon to menu type
         /// </summary>
         private const int ParentAddonIdOffset = 0x1D2;
+
+        private const int AddonArraySizeOffset = 0x1CA;
+        private const int AddonArrayOffset = 0x160;
+
+        private const int ContextMenuItemOffset = 7;
 
         /// <summary>
         /// Offset from agent to actions byte array pointer (have to add the actions offset after)
@@ -108,6 +116,18 @@ namespace XivCommon.Functions.ContextMenu {
         /// </summary>
         public delegate void InventoryContextMenuItemSelectedDelegate(InventoryContextMenuItemSelectedArgs args);
 
+        private delegate IntPtr GameAllocDelegate(ulong size, IntPtr unk, IntPtr allocator, IntPtr alignment);
+
+        private readonly GameAllocDelegate? _gameAlloc;
+
+        private delegate IntPtr GameFreeDelegate(IntPtr a1);
+
+        private readonly GameFreeDelegate? _gameFree;
+
+        private delegate IntPtr GetGameAllocatorDelegate();
+
+        private readonly GetGameAllocatorDelegate? _getGameAllocator;
+
         private delegate IntPtr SomeOpenAddonThingDelegate(IntPtr a1, IntPtr a2, IntPtr a3, uint a4, IntPtr a5, IntPtr a6, IntPtr a7, ushort a8);
 
         private Hook<SomeOpenAddonThingDelegate>? SomeOpenAddonThingHook { get; }
@@ -146,6 +166,24 @@ namespace XivCommon.Functions.ContextMenu {
             this.SeStringManager = manager;
 
             if (!hooks.HasFlag(Hooks.ContextMenu)) {
+                return;
+            }
+
+            if (scanner.TryScanText(Signatures.GameAlloc, out var gameAllocPtr, "Context Menu (GameAlloc)")) {
+                this._gameAlloc = Marshal.GetDelegateForFunctionPointer<GameAllocDelegate>(gameAllocPtr);
+            } else {
+                return;
+            }
+
+            if (scanner.TryScanText(Signatures.GameFree, out var gameFreePtr, "Context Menu (GameFree)")) {
+                this._gameFree = Marshal.GetDelegateForFunctionPointer<GameFreeDelegate>(gameFreePtr);
+            } else {
+                return;
+            }
+
+            if (scanner.TryScanText(Signatures.GetGameAllocator, out var getAllocatorPtr, "Context Menu (GetGameAllocator)")) {
+                this._getGameAllocator = Marshal.GetDelegateForFunctionPointer<GetGameAllocatorDelegate>(getAllocatorPtr);
+            } else {
                 return;
             }
 
@@ -263,7 +301,7 @@ namespace XivCommon.Functions.ContextMenu {
         [HandleProcessCorruptedStateExceptions]
         private unsafe byte OpenMenuDetour(IntPtr addon, int menuSize, AtkValue* atkValueArgs) {
             try {
-                this.OpenMenuDetourInner(addon, ref menuSize, atkValueArgs);
+                this.OpenMenuDetourInner(addon, ref menuSize, ref atkValueArgs);
             } catch (Exception ex) {
                 Logger.LogError(ex, "Exception in OpenMenuDetour");
             }
@@ -271,10 +309,38 @@ namespace XivCommon.Functions.ContextMenu {
             return this.ContextMenuOpenHook!.Original(addon, menuSize, atkValueArgs);
         }
 
-        private unsafe void OpenMenuDetourInner(IntPtr addon, ref int menuSize, AtkValue* atkValueArgs) {
-            this.Items.Clear();
+        private unsafe AtkValue* ExpandContextMenuArray(IntPtr addon) {
+            const ulong newItemCount = MaxItems * 2 + ContextMenuItemOffset;
 
-            const int offset = 7;
+            var oldArray = *(AtkValue**) (addon + AddonArrayOffset);
+            var oldArrayItemCount = *(ushort*) (addon + AddonArraySizeOffset);
+
+            // if the array has enough room, don't reallocate
+            if (oldArrayItemCount >= newItemCount) {
+                return oldArray;
+            }
+
+            // reallocate
+            var size = (ulong) sizeof(AtkValue) * newItemCount + 8;
+            var newArray = this._gameAlloc!(size, IntPtr.Zero, this._getGameAllocator!(), IntPtr.Zero);
+            // zero new memory
+            Marshal.Copy(new byte[size], 0, newArray, (int) size);
+            // update size and pointer
+            *(ulong*) newArray = newItemCount;
+            *(void**) (addon + AddonArrayOffset) = (void*) (newArray + 8);
+            *(ushort*) (addon + AddonArraySizeOffset) = (ushort) newItemCount;
+
+            // copy old memory if existing
+            if (oldArray != null) {
+                Buffer.MemoryCopy(oldArray, (void*) (newArray + 8), size, (ulong) sizeof(AtkValue) * oldArrayItemCount);
+                this._gameFree!((IntPtr) oldArray - 8);
+            }
+
+            return (AtkValue*) (newArray + 8);
+        }
+
+        private unsafe void OpenMenuDetourInner(IntPtr addon, ref int menuSize, ref AtkValue* atkValueArgs) {
+            this.Items.Clear();
 
             var (agentType, agent) = this.GetContextMenuAgent();
             if (agent == IntPtr.Zero) {
@@ -285,11 +351,13 @@ namespace XivCommon.Functions.ContextMenu {
                 return;
             }
 
+            atkValueArgs = this.ExpandContextMenuArray(addon);
+
             var inventory = agentType == AgentType.Inventory;
 
             this.NormalSize = (int) (&atkValueArgs[0])->UInt;
 
-            var hasGameDisabled = menuSize - offset - this.NormalSize > 0;
+            var hasGameDisabled = menuSize - ContextMenuItemOffset - this.NormalSize > 0;
 
             var addonName = this.GetParentAddonName(addon);
 
@@ -299,17 +367,17 @@ namespace XivCommon.Functions.ContextMenu {
 
             var nativeItems = new List<NativeContextMenuItem>();
             for (var i = 0; i < this.NormalSize; i++) {
-                var atkItem = &atkValueArgs[offset + i];
+                var atkItem = &atkValueArgs[ContextMenuItemOffset + i];
 
                 var name = Util.ReadSeString((IntPtr) atkItem->String, this.SeStringManager);
 
                 var enabled = true;
                 if (hasGameDisabled) {
-                    var disabledItem = &atkValueArgs[offset + this.NormalSize + i];
+                    var disabledItem = &atkValueArgs[ContextMenuItemOffset + this.NormalSize + i];
                     enabled = disabledItem->Int == 0;
                 }
 
-                var action = *(menuActions + offset + i);
+                var action = *(menuActions + ContextMenuItemOffset + i);
 
                 nativeItems.Add(new NativeContextMenuItem(action, name, enabled));
             }
@@ -392,19 +460,19 @@ namespace XivCommon.Functions.ContextMenu {
                 var item = this.Items[i];
 
                 if (hasAnyDisabled) {
-                    var disabledArg = &atkValueArgs[offset + this.Items.Count + i];
+                    var disabledArg = &atkValueArgs[ContextMenuItemOffset + this.Items.Count + i];
                     this._atkValueChangeType(disabledArg, ValueType.Int);
                     disabledArg->Int = item.Enabled ? 0 : 1;
                 }
 
                 // set up the agent to take the appropriate action for this item
-                *(menuActions + offset + i) = item switch {
+                *(menuActions + ContextMenuItemOffset + i) = item switch {
                     NativeContextMenuItem nativeItem => nativeItem.InternalAction,
                     _ => inventory ? InventoryNoopContextId : NoopContextId,
                 };
 
                 // set up the menu item
-                var newItem = &atkValueArgs[offset + i];
+                var newItem = &atkValueArgs[ContextMenuItemOffset + i];
                 this._atkValueChangeType(newItem, ValueType.String);
 
                 var name = item switch {
@@ -438,7 +506,7 @@ namespace XivCommon.Functions.ContextMenu {
                 menuSize *= 2;
             }
 
-            menuSize += offset;
+            menuSize += ContextMenuItemOffset;
         }
 
         private byte ItemSelectedDetour(IntPtr addon, int index, byte a3) {
