@@ -21,6 +21,8 @@ namespace XivCommon {
 
         private delegate IntPtr GetAgentModuleDelegate(IntPtr basePtr);
 
+        private delegate IntPtr GetAtkModuleDelegate(IntPtr uiModule);
+
         private delegate IntPtr GetAgentByInternalIdDelegate(IntPtr agentModule, uint id);
 
         private DalamudPluginInterface Interface { get; }
@@ -112,6 +114,30 @@ namespace XivCommon {
         /// <returns>Pointer</returns>
         public IntPtr GetUiModule() {
             return this.Interface.Framework.Gui.GetUIModule();
+        }
+
+        /// <summary>
+        /// Gets the pointer to the RaptureAtkModule
+        /// </summary>
+        /// <returns></returns>
+        public IntPtr GetAtkModule() {
+            var uiModule = this.GetUiModule();
+            if (uiModule == IntPtr.Zero) {
+                return IntPtr.Zero;
+            }
+
+            var vtbl = Marshal.ReadIntPtr(uiModule);
+            if (vtbl == IntPtr.Zero) {
+                return IntPtr.Zero;
+            }
+
+            var getAtkModulePtr = Marshal.ReadIntPtr(vtbl + 0x38);
+            if (getAtkModulePtr == IntPtr.Zero) {
+                return IntPtr.Zero;
+            }
+
+            var getAtkModule = Marshal.GetDelegateForFunctionPointer<GetAtkModuleDelegate>(getAtkModulePtr);
+            return getAtkModule(uiModule);
         }
 
         /// <summary>
