@@ -74,6 +74,9 @@ namespace XivCommon {
         /// </summary>
         public Tooltips Tooltips { get; }
 
+        /// <summary>
+        /// Name plate tools and events
+        /// </summary>
         public NamePlates NamePlates { get; }
 
         internal GameFunctions(Hooks hooks, DalamudPluginInterface @interface) {

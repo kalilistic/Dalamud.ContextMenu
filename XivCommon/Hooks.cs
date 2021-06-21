@@ -65,6 +65,11 @@ namespace XivCommon {
         /// </summary>
         ContextMenu = 1 << 6,
 
+        /// <summary>
+        /// The name plate hooks.
+        ///
+        /// This hook is used in order to enable name plate functions.
+        /// </summary>
         NamePlates = 1 << 7,
     }
 

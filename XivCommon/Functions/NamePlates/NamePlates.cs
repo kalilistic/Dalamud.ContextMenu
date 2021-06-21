@@ -7,6 +7,9 @@ using FFXIVClientStructs.FFXIV.Client.Graphics;
 using FFXIVClientStructs.FFXIV.Client.UI;
 
 namespace XivCommon.Functions.NamePlates {
+    /// <summary>
+    /// The class containing name plate functionality
+    /// </summary>
     public class NamePlates : IDisposable {
         private static class Signatures {
             internal const string NamePlateUpdate = "48 8B C4 41 56 48 81 EC ?? ?? ?? ?? 48 89 58 F0";
@@ -14,14 +17,33 @@ namespace XivCommon.Functions.NamePlates {
 
         private unsafe delegate IntPtr NamePlateUpdateDelegate(AddonNamePlate* addon, NumberArrayData** numberData, StringArrayData** stringData);
 
+        /// <summary>
+        /// The delegate for name plate update events.
+        /// </summary>
         public delegate void NamePlateUpdateEvent(NamePlateUpdateEventArgs args);
 
+        /// <summary>
+        /// <para>
+        /// The event that is fired when a name plate is due to update.
+        /// </para>
+        /// <para>
+        /// Requires the <see cref="Hooks.NamePlates"/> hook to be enabled.
+        /// </para>
+        /// </summary>
         public event NamePlateUpdateEvent? OnUpdate;
 
         private GameFunctions Functions { get; }
         private SeStringManager SeStringManager { get; }
         private readonly Hook<NamePlateUpdateDelegate>? _namePlateUpdateHook;
 
+        /// <summary>
+        /// <para>
+        /// If all name plates should be forced to redraw.
+        /// </para>
+        /// <para>
+        /// This is useful for forcing your changes to apply to existing name plates when the plugin is hot-loaded.
+        /// </para>
+        /// </summary>
         public bool ForceRedraw { get; set; }
 
         internal NamePlates(GameFunctions functions, SigScanner scanner, SeStringManager manager, bool hookEnabled) {
@@ -46,10 +68,12 @@ namespace XivCommon.Functions.NamePlates {
             this._namePlateUpdateHook?.Dispose();
         }
 
+        private const int PlateTypeIndex = 1;
         private const int UpdateIndex = 2;
         private const int ColourIndex = 8;
         private const int IconIndex = 13;
         private const int NamePlateObjectIndex = 15;
+        private const int FlagsIndex = 17;
         private const int NameIndex = 0;
         private const int TitleIndex = 50;
         private const int FreeCompanyIndex = 100;
@@ -89,6 +113,8 @@ namespace XivCommon.Functions.NamePlates {
 
                 var icon = numbers->IntArray[numbersIndex + IconIndex];
                 var nameColour = *(ByteColor*) &numbers->IntArray[numbersIndex + ColourIndex];
+                var plateType = numbers->IntArray[numbersIndex + PlateTypeIndex];
+                var flags = numbers->IntArray[numbersIndex + FlagsIndex];
 
                 var nameRaw = strings->StringArray[NameIndex + i];
                 var name = Util.ReadSeString((IntPtr) nameRaw, this.SeStringManager);
@@ -103,12 +129,14 @@ namespace XivCommon.Functions.NamePlates {
                 var level = Util.ReadSeString((IntPtr) levelRaw, this.SeStringManager);
 
                 var args = new NamePlateUpdateEventArgs((uint) info.ActorID) {
-                    Name = name,
-                    FreeCompany = fc,
-                    Title = title,
-                    Level = level,
+                    Name = new SeString(name.Payloads),
+                    FreeCompany = new SeString(fc.Payloads),
+                    Title = new SeString(title.Payloads),
+                    Level = new SeString(level.Payloads),
                     Colour = nameColour,
                     Icon = (uint) icon,
+                    Type = (PlateType) plateType,
+                    Flags = flags,
                 };
 
                 this.OnUpdate?.Invoke(args);
@@ -146,9 +174,16 @@ namespace XivCommon.Functions.NamePlates {
                 if (colourInt != numbers->IntArray[numbersIndex + ColourIndex]) {
                     numbers->SetValue(numbersIndex + ColourIndex, colourInt);
                 }
+
+                if (plateType != (int) args.Type) {
+                    numbers->SetValue(numbersIndex + PlateTypeIndex, (int) args.Type);
+                }
+
+                if (flags != args.Flags) {
+                    numbers->SetValue(numbersIndex + FlagsIndex, args.Flags);
+                }
             }
 
-            Original:
             return this._namePlateUpdateHook!.Original(addon, numberData, stringData);
         }
     }

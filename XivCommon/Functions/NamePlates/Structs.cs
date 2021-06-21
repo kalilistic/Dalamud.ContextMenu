@@ -55,4 +55,39 @@ namespace XivCommon.Functions.NamePlates {
         [FieldOffset(0x28)]
         public byte* UnkString; // char *
     }
+
+    /// <summary>
+    /// The various different name plate types
+    /// </summary>
+    public enum PlateType {
+        /// <summary>
+        /// A normal player name plate
+        /// </summary>
+        Player = 0,
+
+        /// <summary>
+        /// A name plate with the icon and FC tag removed
+        /// </summary>
+        NoIconOrFc = 1, // 2, 5
+
+        /// <summary>
+        /// A name plate with a level string visible, title always below the name, and FC tag removed
+        /// </summary>
+        LevelNoFc = 3, // 4
+
+        /// <summary>
+        /// A name plate with only the name visible
+        /// </summary>
+        NameOnly = 6,
+
+        /// <summary>
+        /// A name plate with only the level string and name visible
+        /// </summary>
+        LevelAndName = 7,
+
+        /// <summary>
+        /// A name plate where the title always appears below the name and the FC tag is removed
+        /// </summary>
+        LowTitleNoFc = 8,
+    }
 }
