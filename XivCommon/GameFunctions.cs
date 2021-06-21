@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using Dalamud.Plugin;
 using XivCommon.Functions;
 using XivCommon.Functions.ContextMenu;
+using XivCommon.Functions.NamePlates;
 using XivCommon.Functions.Tooltips;
 
 namespace XivCommon {
@@ -30,6 +31,8 @@ namespace XivCommon {
         private GetAgentByInternalIdDelegate? GetAgentByInternalIdInternal { get; }
 
         private GetAtkStageSingletonDelegate? GetAtkStageSingletonInternal { get; }
+
+        internal UiAlloc UiAlloc { get; }
 
         /// <summary>
         /// Chat functions
@@ -71,6 +74,8 @@ namespace XivCommon {
         /// </summary>
         public Tooltips Tooltips { get; }
 
+        public NamePlates NamePlates { get; }
+
         internal GameFunctions(Hooks hooks, DalamudPluginInterface @interface) {
             this.Interface = @interface;
 
@@ -80,6 +85,7 @@ namespace XivCommon {
             var dalamudField = @interface.GetType().GetField("dalamud", BindingFlags.Instance | BindingFlags.NonPublic);
             var dalamud = (Dalamud.Dalamud) dalamudField!.GetValue(@interface);
 
+            this.UiAlloc = new UiAlloc(scanner);
             this.Chat = new Chat(this, scanner);
             this.PartyFinder = new PartyFinder(scanner, @interface.Framework.Gui.PartyFinder, hooks);
             this.BattleTalk = new BattleTalk(this, scanner, seStringManager, hooks.HasFlag(Hooks.BattleTalk));
@@ -88,6 +94,7 @@ namespace XivCommon {
             this.ChatBubbles = new ChatBubbles(dalamud, scanner, seStringManager, hooks.HasFlag(Hooks.ChatBubbles));
             this.ContextMenu = new ContextMenu(this, scanner, seStringManager, @interface.ClientState.ClientLanguage, hooks);
             this.Tooltips = new Tooltips(scanner, @interface.Framework, @interface.Framework.Gui, seStringManager, hooks.HasFlag(Hooks.Tooltips));
+            this.NamePlates = new NamePlates(this, scanner, seStringManager, hooks.HasFlag(Hooks.NamePlates));
 
             if (scanner.TryScanText(Signatures.GetAgentByInternalId, out var byInternalIdPtr, "GetAgentByInternalId")) {
                 this.GetAgentByInternalIdInternal = Marshal.GetDelegateForFunctionPointer<GetAgentByInternalIdDelegate>(byInternalIdPtr);
@@ -100,6 +107,7 @@ namespace XivCommon {
 
         /// <inheritdoc />
         public void Dispose() {
+            this.NamePlates.Dispose();
             this.Tooltips.Dispose();
             this.ContextMenu.Dispose();
             this.ChatBubbles.Dispose();
@@ -119,19 +127,14 @@ namespace XivCommon {
         /// <summary>
         /// Gets the pointer to the RaptureAtkModule
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Pointer</returns>
         public IntPtr GetAtkModule() {
             var uiModule = this.GetUiModule();
             if (uiModule == IntPtr.Zero) {
                 return IntPtr.Zero;
             }
 
-            var vtbl = Marshal.ReadIntPtr(uiModule);
-            if (vtbl == IntPtr.Zero) {
-                return IntPtr.Zero;
-            }
-
-            var getAtkModulePtr = Marshal.ReadIntPtr(vtbl + 0x38);
+            var getAtkModulePtr = FollowPtrChain(uiModule, new[] { 0, 0x38 });
             if (getAtkModulePtr == IntPtr.Zero) {
                 return IntPtr.Zero;
             }

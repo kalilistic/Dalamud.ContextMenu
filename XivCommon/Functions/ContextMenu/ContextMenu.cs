@@ -18,9 +18,6 @@ namespace XivCommon.Functions.ContextMenu {
     /// </summary>
     public class ContextMenu : IDisposable {
         private static class Signatures {
-            internal const string GameAlloc = "E8 ?? ?? ?? ?? 45 8D 67 23";
-            internal const string GameFree = "E8 ?? ?? ?? ?? 4C 89 7B 60";
-            internal const string GetGameAllocator = "E8 ?? ?? ?? ?? 8B 75 08";
             internal const string SomeOpenAddonThing = "E8 ?? ?? ?? ?? 0F B7 C0 48 83 C4 60";
             internal const string ContextMenuOpen = "48 8B C4 57 41 56 41 57 48 81 EC ?? ?? ?? ??";
             internal const string ContextMenuSelected = "48 89 5C 24 ?? 55 57 41 56 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 44 24 ?? 80 B9 ?? ?? ?? ?? ??";
@@ -116,18 +113,6 @@ namespace XivCommon.Functions.ContextMenu {
         /// </summary>
         public delegate void InventoryContextMenuItemSelectedDelegate(InventoryContextMenuItemSelectedArgs args);
 
-        private delegate IntPtr GameAllocDelegate(ulong size, IntPtr unk, IntPtr allocator, IntPtr alignment);
-
-        private readonly GameAllocDelegate? _gameAlloc;
-
-        private delegate IntPtr GameFreeDelegate(IntPtr a1);
-
-        private readonly GameFreeDelegate? _gameFree;
-
-        private delegate IntPtr GetGameAllocatorDelegate();
-
-        private readonly GetGameAllocatorDelegate? _getGameAllocator;
-
         private delegate IntPtr SomeOpenAddonThingDelegate(IntPtr a1, IntPtr a2, IntPtr a3, uint a4, IntPtr a5, IntPtr a6, IntPtr a7, ushort a8);
 
         private Hook<SomeOpenAddonThingDelegate>? SomeOpenAddonThingHook { get; }
@@ -166,24 +151,6 @@ namespace XivCommon.Functions.ContextMenu {
             this.SeStringManager = manager;
 
             if (!hooks.HasFlag(Hooks.ContextMenu)) {
-                return;
-            }
-
-            if (scanner.TryScanText(Signatures.GameAlloc, out var gameAllocPtr, "Context Menu (GameAlloc)")) {
-                this._gameAlloc = Marshal.GetDelegateForFunctionPointer<GameAllocDelegate>(gameAllocPtr);
-            } else {
-                return;
-            }
-
-            if (scanner.TryScanText(Signatures.GameFree, out var gameFreePtr, "Context Menu (GameFree)")) {
-                this._gameFree = Marshal.GetDelegateForFunctionPointer<GameFreeDelegate>(gameFreePtr);
-            } else {
-                return;
-            }
-
-            if (scanner.TryScanText(Signatures.GetGameAllocator, out var getAllocatorPtr, "Context Menu (GetGameAllocator)")) {
-                this._getGameAllocator = Marshal.GetDelegateForFunctionPointer<GetGameAllocatorDelegate>(getAllocatorPtr);
-            } else {
                 return;
             }
 
@@ -322,7 +289,7 @@ namespace XivCommon.Functions.ContextMenu {
 
             // reallocate
             var size = (ulong) sizeof(AtkValue) * newItemCount + 8;
-            var newArray = this._gameAlloc!(size, IntPtr.Zero, this._getGameAllocator!(), IntPtr.Zero);
+            var newArray = this.Functions.UiAlloc.Alloc(size);
             // zero new memory
             Marshal.Copy(new byte[size], 0, newArray, (int) size);
             // update size and pointer
@@ -333,7 +300,7 @@ namespace XivCommon.Functions.ContextMenu {
             // copy old memory if existing
             if (oldArray != null) {
                 Buffer.MemoryCopy(oldArray, (void*) (newArray + 8), size, (ulong) sizeof(AtkValue) * oldArrayItemCount);
-                this._gameFree!((IntPtr) oldArray - 8);
+                this.Functions.UiAlloc.Free((IntPtr) oldArray - 8);
             }
 
             return (AtkValue*) (newArray + 8);

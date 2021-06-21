@@ -64,6 +64,8 @@ namespace XivCommon {
         /// This hook is used in order to enable context menu functions.
         /// </summary>
         ContextMenu = 1 << 6,
+
+        NamePlates = 1 << 7,
     }
 
     internal static class HooksExt {
