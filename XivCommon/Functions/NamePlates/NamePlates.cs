@@ -80,10 +80,24 @@ namespace XivCommon.Functions.NamePlates {
         private const int LevelIndex = 150;
 
         private unsafe IntPtr NamePlateUpdateDetour(AddonNamePlate* addon, NumberArrayData** numberData, StringArrayData** stringData) {
+            try {
+                this.NamePlateUpdateDetourInner(numberData, stringData);
+            } catch (Exception ex) {
+                Logger.LogError(ex, "Exception in NamePlateUpdateDetour");
+            }
+
+            return this._namePlateUpdateHook!.Original(addon, numberData, stringData);
+        }
+
+        private unsafe void NamePlateUpdateDetourInner(NumberArrayData** numberData, StringArrayData** stringData) {
             // don't skip to original if no subscribers because of ForceRedraw
 
             var numbers = numberData[5];
             var strings = stringData[4];
+            if (numbers == null || strings == null) {
+                return;
+            }
+
             var atkModule = (RaptureAtkModule*) this.Functions.GetAtkModule();
 
             var active = numbers->IntArray[0];
@@ -139,14 +153,25 @@ namespace XivCommon.Functions.NamePlates {
                     Flags = flags,
                 };
 
-                this.OnUpdate?.Invoke(args);
+                try {
+                    this.OnUpdate?.Invoke(args);
+                } catch (Exception ex) {
+                    Logger.LogError(ex, "Exception in name plate update event");
+                }
 
                 void Replace(byte[] bytes, int i) {
+                    // allocate new memory with the game for the new string
                     var mem = this.Functions.UiAlloc.Alloc((ulong) bytes.Length + 1);
+                    // copy the new string over to the game's memory
                     Marshal.Copy(bytes, 0, mem, bytes.Length);
+                    // terminate the new string
                     *(byte*) (mem + bytes.Length) = 0;
-                    this.Functions.UiAlloc.Free((IntPtr) strings->StringArray[i]);
+
+                    // replace the pointer with our new one
+                    var old = strings->StringArray[i];
                     strings->StringArray[i] = (byte*) mem;
+                    // free the old pointer
+                    this.Functions.UiAlloc.Free((IntPtr) old);
                 }
 
                 if (name != args.Name) {
@@ -183,8 +208,6 @@ namespace XivCommon.Functions.NamePlates {
                     numbers->SetValue(numbersIndex + FlagsIndex, args.Flags);
                 }
             }
-
-            return this._namePlateUpdateHook!.Original(addon, numberData, stringData);
         }
     }
 }
