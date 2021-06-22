@@ -77,7 +77,8 @@ namespace XivCommon.Functions.NamePlates {
         private const int NameIndex = 0;
         private const int TitleIndex = 50;
         private const int FreeCompanyIndex = 100;
-        private const int LevelIndex = 150;
+        private const int EnemyLetterIndex = 150;
+        private const int LevelIndex = 200;
 
         private unsafe IntPtr NamePlateUpdateDetour(AddonNamePlate* addon, NumberArrayData** numberData, StringArrayData** stringData) {
             try {
@@ -142,11 +143,17 @@ namespace XivCommon.Functions.NamePlates {
                 var levelRaw = strings->StringArray[LevelIndex + i];
                 var level = Util.ReadSeString((IntPtr) levelRaw, this.SeStringManager);
 
+                var letterRaw = strings->StringArray[EnemyLetterIndex + i];
+                var letter = Util.ReadSeString((IntPtr) letterRaw, this.SeStringManager);
+
                 var args = new NamePlateUpdateEventArgs((uint) info.ActorID) {
                     Name = new SeString(name.Payloads),
                     FreeCompany = new SeString(fc.Payloads),
                     Title = new SeString(title.Payloads),
                     Level = new SeString(level.Payloads),
+                    #pragma warning disable 0618
+                    EnemyLetter = new SeString(letter.Payloads),
+                    #pragma warning restore 0618
                     Colour = nameColour,
                     Icon = (uint) icon,
                     Type = (PlateType) plateType,
@@ -159,7 +166,7 @@ namespace XivCommon.Functions.NamePlates {
                     Logger.LogError(ex, "Exception in name plate update event");
                 }
 
-                void Replace(byte[] bytes, int i) {
+                void Replace(byte[] bytes, int i, bool free = true) {
                     // allocate new memory with the game for the new string
                     var mem = this.Functions.UiAlloc.Alloc((ulong) bytes.Length + 1);
                     // copy the new string over to the game's memory
@@ -171,7 +178,9 @@ namespace XivCommon.Functions.NamePlates {
                     var old = strings->StringArray[i];
                     strings->StringArray[i] = (byte*) mem;
                     // free the old pointer
-                    this.Functions.UiAlloc.Free((IntPtr) old);
+                    if (free && old != null) {
+                        this.Functions.UiAlloc.Free((IntPtr) old);
+                    }
                 }
 
                 if (name != args.Name) {
@@ -188,6 +197,12 @@ namespace XivCommon.Functions.NamePlates {
 
                 if (level != args.Level) {
                     Replace(args.Level.Encode(), LevelIndex + i);
+                }
+
+                if (letter != args.EnemyLetter) {
+                    // FIXME: sometimes the pointer here in the game is garbage, so freeing is a heap corruption
+                    //        figure out how to free this properly
+                    Replace(args.EnemyLetter.Encode(), EnemyLetterIndex + i, false);
                 }
 
                 if (icon != args.Icon) {

@@ -1,4 +1,5 @@
-﻿using Dalamud.Game.Text.SeStringHandling;
+﻿using System;
+using Dalamud.Game.Text.SeStringHandling;
 using FFXIVClientStructs.FFXIV.Client.Graphics;
 
 namespace XivCommon.Functions.NamePlates {
@@ -29,7 +30,22 @@ namespace XivCommon.Functions.NamePlates {
         /// <summary>
         /// The level string for name plates that use it. Set to the empty string to disable.
         /// </summary>
+        ///
         public SeString Level { get; set; } = null!;
+
+        /// <summary>
+        /// <para>
+        /// The letter that appears after enemy names, such as A, B, etc.
+        /// </para>
+        /// <para>
+        /// <b>Setting this property will always cause a memory leak.</b>
+        /// </para>
+        /// </summary>
+        public SeString EnemyLetter {
+            get;
+            [Obsolete("Setting this property will always cause a memory leak.")]
+            set;
+        } = null!;
 
         /// <summary>
         /// The icon to be shown on this name plate. Use <see cref="uint.MaxValue"/> for no icon.
