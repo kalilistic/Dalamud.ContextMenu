@@ -22,7 +22,9 @@ namespace XivCommon.Functions.ContextMenu {
             internal const string ContextMenuOpen = "48 8B C4 57 41 56 41 57 48 81 EC ?? ?? ?? ??";
             internal const string ContextMenuSelected = "48 89 5C 24 ?? 55 57 41 56 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 44 24 ?? 80 B9 ?? ?? ?? ?? ??";
             internal const string ContextMenuEvent66 = "E8 ?? ?? ?? ?? 44 39 A3 ?? ?? ?? ?? 0F 84 ?? ?? ?? ??";
+            internal const string InventoryContextMenuEvent30 = "E8 ?? ?? ?? ?? 48 83 C4 30 5B C3 8B 83 ?? ?? ?? ??";
             internal const string SetUpContextSubMenu = "E8 ?? ?? ?? ?? 44 39 A3 ?? ?? ?? ?? 0F 86 ?? ?? ?? ??";
+            internal const string SetUpInventoryContextSubMenu = "44 88 44 24 ?? 88 54 24 10 53";
             internal const string TitleContextMenuOpen = "48 8B C4 57 41 55 41 56 48 81 EC ?? ?? ?? ??";
             internal const string AtkValueChangeType = "E8 ?? ?? ?? ?? 45 84 F6 48 8D 4C 24 ??";
             internal const string AtkValueSetString = "E8 ?? ?? ?? ?? 41 03 ED";
@@ -75,6 +77,8 @@ namespace XivCommon.Functions.ContextMenu {
         // Found in the first function in the agent's vtable
         private const byte NoopContextId = 0x67;
         private const byte InventoryNoopContextId = 0xFF;
+        private const byte ContextSubId = 0x66;
+        private const byte InventoryContextSubId = 0x30;
 
         #endregion
 
@@ -141,9 +145,17 @@ namespace XivCommon.Functions.ContextMenu {
 
         private readonly SetUpContextSubMenuDelegate _setUpContextSubMenu = null!;
 
+        private delegate IntPtr SetUpInventoryContextSubMenuDelegate(IntPtr agent, byte hasTitle, byte zero);
+
+        private readonly SetUpInventoryContextSubMenuDelegate _setUpInventoryContextSubMenu = null!;
+
         private delegate byte ContextMenuEvent66Delegate(IntPtr agent);
 
         private Hook<ContextMenuEvent66Delegate>? ContextMenuEvent66Hook { get; }
+
+        private delegate void InventoryContextMenuEvent30Delegate(IntPtr agent, IntPtr a2, int a3, int a4, short a5);
+
+        private Hook<InventoryContextMenuEvent30Delegate>? InventoryContextMenuEvent30Hook { get; }
 
         private unsafe delegate void AtkValueChangeTypeDelegate(AtkValue* thisPtr, ValueType type);
 
@@ -193,6 +205,12 @@ namespace XivCommon.Functions.ContextMenu {
                 return;
             }
 
+            if (scanner.TryScanText(Signatures.SetUpInventoryContextSubMenu, out var setUpInvSubPtr, "Context Menu (set up inventory submenu)")) {
+                this._setUpInventoryContextSubMenu = Marshal.GetDelegateForFunctionPointer<SetUpInventoryContextSubMenuDelegate>(setUpInvSubPtr);
+            } else {
+                return;
+            }
+
             if (scanner.TryScanText(Signatures.SomeOpenAddonThing, out var thingPtr, "Context Menu (some OpenAddon thing)")) {
                 this.SomeOpenAddonThingHook = new Hook<SomeOpenAddonThingDelegate>(thingPtr, new SomeOpenAddonThingDelegate(this.SomeOpenAddonThingDetour));
                 this.SomeOpenAddonThingHook.Enable();
@@ -227,6 +245,11 @@ namespace XivCommon.Functions.ContextMenu {
                 this.ContextMenuEvent66Hook = new Hook<ContextMenuEvent66Delegate>(event66Ptr, new ContextMenuEvent66Delegate(this.ContextMenuEvent66Detour));
                 this.ContextMenuEvent66Hook.Enable();
             }
+
+            if (scanner.TryScanText(Signatures.InventoryContextMenuEvent30, out var event30Ptr, "Context Menu (inv event 30)")) {
+                this.InventoryContextMenuEvent30Hook = new Hook<InventoryContextMenuEvent30Delegate>(event30Ptr, new InventoryContextMenuEvent30Delegate(this.InventoryContextMenuEvent30Detour));
+                this.InventoryContextMenuEvent30Hook.Enable();
+            }
         }
 
         /// <inheritdoc />
@@ -236,6 +259,7 @@ namespace XivCommon.Functions.ContextMenu {
             this.TitleContextMenuOpenHook?.Dispose();
             this.ContextMenuItemSelectedHook?.Dispose();
             this.ContextMenuEvent66Hook?.Dispose();
+            this.InventoryContextMenuEvent30Hook?.Dispose();
         }
 
         private IntPtr SomeOpenAddonThingDetour(IntPtr a1, IntPtr a2, IntPtr a3, uint a4, IntPtr a5, IntPtr a6, IntPtr a7, ushort a8) {
@@ -257,15 +281,17 @@ namespace XivCommon.Functions.ContextMenu {
             Unknown,
         }
 
-        private (AgentType agentType, IntPtr agent) GetContextMenuAgent() {
+        private (AgentType agentType, IntPtr agent) GetContextMenuAgent(IntPtr? agent = null) {
+            agent ??= this.Agent;
+
             var agentType = AgentType.Unknown;
-            if (this.Agent == this.Functions.GetAgentByInternalId(9u)) {
+            if (agent == this.Functions.GetAgentByInternalId(9u)) {
                 agentType = AgentType.Normal;
-            } else if (this.Agent == this.Functions.GetAgentByInternalId(10u)) {
+            } else if (agent == this.Functions.GetAgentByInternalId(10u)) {
                 agentType = AgentType.Inventory;
             }
 
-            return (agentType, this.Agent);
+            return (agentType, agent.Value);
         }
 
         private unsafe string? GetParentAddonName(IntPtr addon) {
@@ -372,8 +398,6 @@ namespace XivCommon.Functions.ContextMenu {
 
             var hasGameDisabled = menuSize - offset - this.NormalSize > 0;
 
-            var addonName = this.GetParentAddonName(addon);
-
             var menuActions = inventory
                 ? (byte*) (agent + InventoryMenuActionsOffset)
                 : (byte*) (Marshal.ReadIntPtr(agent + MenuActionsPointerOffset) + MenuActionsOffset);
@@ -397,75 +421,8 @@ namespace XivCommon.Functions.ContextMenu {
                 nativeItems.Add(new NativeContextMenuItem(action, name, enabled, isSubMenu));
             }
 
-            if (inventory) {
-                var info = GetInventoryAgentInfo(agent);
-
-                var args = new InventoryContextMenuOpenArgs(
-                    addon,
-                    agent,
-                    addonName,
-                    info.itemId,
-                    info.itemAmount,
-                    info.itemHq
-                );
-                args.Items.AddRange(nativeItems);
-
-                try {
-                    this.OpenInventoryContextMenu?.Invoke(args);
-                } catch (Exception ex) {
-                    Logger.LogError(ex, "Exception in OpenMenuDetour");
-                    return;
-                }
-
-                // remove any NormalContextMenuItems that may have been added - these will crash the game
-                args.Items.RemoveAll(item => item is NormalContextMenuItem);
-
-                // set the agent of any remaining custom items
-                foreach (var item in args.Items) {
-                    if (item is InventoryContextMenuItem custom) {
-                        custom.Agent = agent;
-                    }
-                }
-
-                this.Items.AddRange(args.Items);
-            } else {
-                var info = this.GetAgentInfo(agent);
-
-                var args = new ContextMenuOpenArgs(
-                    addon,
-                    agent,
-                    addonName,
-                    info.actorId,
-                    info.contentIdLower,
-                    info.text,
-                    info.actorWorld
-                );
-                args.Items.AddRange(nativeItems);
-
-                try {
-                    this.OpenContextMenu?.Invoke(args);
-                } catch (Exception ex) {
-                    Logger.LogError(ex, "Exception in OpenMenuDetour");
-                    return;
-                }
-
-                // remove any InventoryContextMenuItems that may have been added - these will crash the game
-                args.Items.RemoveAll(item => item is InventoryContextMenuItem);
-
-                // set the agent of any remaining custom items
-                foreach (var item in args.Items) {
-                    if (item is NormalContextMenuItem custom) {
-                        custom.Agent = agent;
-                    }
-                }
-
-                this.Items.AddRange(args.Items);
-            }
-
-            if (this.Items.Count > MaxItems) {
-                var toRemove = this.Items.Count - MaxItems;
-                this.Items.RemoveRange(MaxItems, toRemove);
-                Logger.LogWarning($"Context menu item limit ({MaxItems}) exceeded. Removing {toRemove} item(s).");
+            if (this.PopulateItems(addon, agent, this.OpenContextMenu, this.OpenInventoryContextMenu, nativeItems)) {
+                return;
             }
 
             var hasCustomDisabled = this.Items.Any(item => !item.Enabled);
@@ -486,7 +443,8 @@ namespace XivCommon.Functions.ContextMenu {
                 // set up the agent to take the appropriate action for this item
                 *(menuActions + offset + i) = item switch {
                     NativeContextMenuItem nativeItem => nativeItem.InternalAction,
-                    ContextSubMenuItem => 0x66,
+                    ContextSubMenuItem => ContextSubId,
+                    InventoryContextSubMenuItem => InventoryContextSubId,
                     _ => inventory ? InventoryNoopContextId : NoopContextId,
                 };
 
@@ -515,6 +473,100 @@ namespace XivCommon.Functions.ContextMenu {
             menuSize += offset;
         }
 
+        /// <returns>true on error</returns>
+        private bool PopulateItems(IntPtr addon, IntPtr agent, ContextMenuOpenEventDelegate? normalAction, InventoryContextMenuOpenEventDelegate? inventoryAction, IReadOnlyCollection<NativeContextMenuItem>? nativeItems = null) {
+            var (agentType, _) = this.GetContextMenuAgent(agent);
+            var inventory = agentType == AgentType.Inventory;
+            var parentAddonName = this.GetParentAddonName(addon);
+
+            if (inventory) {
+                var info = GetInventoryAgentInfo(agent);
+
+                var args = new InventoryContextMenuOpenArgs(
+                    addon,
+                    agent,
+                    parentAddonName,
+                    info.itemId,
+                    info.itemAmount,
+                    info.itemHq
+                );
+                if (nativeItems != null) {
+                    args.Items.AddRange(nativeItems);
+                }
+
+                try {
+                    inventoryAction?.Invoke(args);
+                } catch (Exception ex) {
+                    Logger.LogError(ex, "Exception in OpenMenuDetour");
+                    return true;
+                }
+
+                // remove any NormalContextMenuItems that may have been added - these will crash the game
+                args.Items.RemoveAll(item => item is NormalContextMenuItem);
+
+                // set the agent of any remaining custom items
+                foreach (var item in args.Items) {
+                    switch (item) {
+                        case InventoryContextMenuItem custom:
+                            custom.Agent = agent;
+                            break;
+                        case InventoryContextSubMenuItem custom:
+                            custom.Agent = agent;
+                            break;
+                    }
+                }
+
+                this.Items.AddRange(args.Items);
+            } else {
+                var info = this.GetAgentInfo(agent);
+
+                var args = new ContextMenuOpenArgs(
+                    addon,
+                    agent,
+                    parentAddonName,
+                    info.actorId,
+                    info.contentIdLower,
+                    info.text,
+                    info.actorWorld
+                );
+                if (nativeItems != null) {
+                    args.Items.AddRange(nativeItems);
+                }
+
+                try {
+                    normalAction?.Invoke(args);
+                } catch (Exception ex) {
+                    Logger.LogError(ex, "Exception in OpenMenuDetour");
+                    return true;
+                }
+
+                // remove any InventoryContextMenuItems that may have been added - these will crash the game
+                args.Items.RemoveAll(item => item is InventoryContextMenuItem);
+
+                // set the agent of any remaining custom items
+                foreach (var item in args.Items) {
+                    switch (item) {
+                        case NormalContextMenuItem custom:
+                            custom.Agent = agent;
+                            break;
+                        case ContextSubMenuItem custom:
+                            custom.Agent = agent;
+                            break;
+                    }
+                }
+
+                this.Items.AddRange(args.Items);
+            }
+
+            if (this.Items.Count > MaxItems) {
+                var toRemove = this.Items.Count - MaxItems;
+                this.Items.RemoveRange(MaxItems, toRemove);
+                Logger.LogWarning($"Context menu item limit ({MaxItems}) exceeded. Removing {toRemove} item(s).");
+            }
+
+            return false;
+        }
+
         private SeString GetItemName(BaseContextMenuItem item) {
             return item switch {
                 NormalContextMenuItem custom => this.Language switch {
@@ -538,12 +590,19 @@ namespace XivCommon.Functions.ContextMenu {
                     ClientLanguage.French => custom.NameFrench,
                     _ => custom.NameEnglish,
                 },
+                InventoryContextSubMenuItem custom => this.Language switch {
+                    ClientLanguage.Japanese => custom.NameJapanese,
+                    ClientLanguage.English => custom.NameEnglish,
+                    ClientLanguage.German => custom.NameGerman,
+                    ClientLanguage.French => custom.NameFrench,
+                    _ => custom.NameEnglish,
+                },
                 NativeContextMenuItem native => native.Name,
                 _ => "Invalid context menu item",
             };
         }
 
-        private ContextSubMenuItem? SubMenuItem { get; set; }
+        private BaseContextMenuItem? SubMenuItem { get; set; }
 
         private byte ItemSelectedDetour(IntPtr addon, int index, byte a3) {
             this.FreeSubMenuTitle();
@@ -558,7 +617,10 @@ namespace XivCommon.Functions.ContextMenu {
                     this.SubMenuItem = sub;
                     break;
                 }
-                // a custom item is being clicked
+                case InventoryContextSubMenuItem sub: {
+                    this.SubMenuItem = sub;
+                    break;
+                }
                 case NormalContextMenuItem custom: {
                     var addonName = this.GetParentAddonName(addon);
                     var info = this.GetAgentInfo(custom.Agent);
@@ -619,9 +681,10 @@ namespace XivCommon.Functions.ContextMenu {
             this.SubMenuTitle = IntPtr.Zero;
         }
 
-        private unsafe byte ContextMenuEvent66Detour(IntPtr agent) {
+        /// <returns>false if original should be called</returns>
+        private unsafe bool SubMenuInner(IntPtr agent) {
             if (this.SubMenuItem == null) {
-                return this.ContextMenuEvent66Hook!.Original(agent);
+                return false;
             }
 
             // free our workaround pointer
@@ -630,15 +693,7 @@ namespace XivCommon.Functions.ContextMenu {
             this.Items.Clear();
 
             try {
-                // this will attempt to read the header from the agent
-                // we don't currently update the agent with our new items, so let's just work around it
-                var name = this.Language switch {
-                    ClientLanguage.Japanese => this.SubMenuItem.NameJapanese,
-                    ClientLanguage.English => this.SubMenuItem.NameEnglish,
-                    ClientLanguage.German => this.SubMenuItem.NameGerman,
-                    ClientLanguage.French => this.SubMenuItem.NameFrench,
-                    _ => this.SubMenuItem.NameEnglish,
-                };
+                var name = this.GetItemName(this.SubMenuItem);
 
                 // Since the game checks the agent's AtkValue array for the submenu title, and since we
                 // don't update that array, we need to work around this check.
@@ -667,35 +722,17 @@ namespace XivCommon.Functions.ContextMenu {
                 var submenuArgs = (AtkValue*) (secondaryArgsPtr + 8);
                 var size = *(ushort*) secondaryArgsPtr;
 
-                var info = this.GetAgentInfo(agent);
                 var addon = this.GetAddonFromAgent(agent);
-
-                var args = new ContextMenuOpenArgs(
-                    addon,
-                    agent,
-                    this.GetParentAddonName(addon),
-                    info.actorId,
-                    info.contentIdLower,
-                    info.text,
-                    info.actorWorld
-                );
-                this.SubMenuItem.Action(args);
-                // remove any InventoryContextMenuItems that may have been added - these will crash the game
-                args.Items.RemoveAll(item => item is InventoryContextMenuItem);
-
-                // set the agent of any remaining custom items
-                foreach (var item in args.Items) {
-                    if (item is NormalContextMenuItem custom) {
-                        custom.Agent = agent;
-                    }
+                var normalAction = (this.SubMenuItem as ContextSubMenuItem)?.Action;
+                var inventoryAction = (this.SubMenuItem as InventoryContextSubMenuItem)?.Action;
+                if (this.PopulateItems(addon, agent, normalAction, inventoryAction)) {
+                    return true;
                 }
-
-                this.Items.AddRange(args.Items);
 
                 var booleanOffset = *(long*) (agent + *(byte*) (agent + 0x1740) * 0x678 + 0x690) != 0 ? 1 : 0;
 
-                for (var i = 0; i < args.Items.Count; i++) {
-                    var item = args.Items[i];
+                for (var i = 0; i < this.Items.Count; i++) {
+                    var item = this.Items[i];
 
                     *(ushort*) secondaryArgsPtr += 1;
                     var arg = &submenuArgs[size + i];
@@ -712,8 +749,17 @@ namespace XivCommon.Functions.ContextMenu {
                 this.SubMenuItem = null;
             }
 
+            return true;
+        }
 
-            return 0;
+        private byte ContextMenuEvent66Detour(IntPtr agent) {
+            return this.SubMenuInner(agent) ? (byte) 0 : this.ContextMenuEvent66Hook!.Original(agent);
+        }
+
+        private void InventoryContextMenuEvent30Detour(IntPtr agent, IntPtr a2, int a3, int a4, short a5) {
+            if (!this.SubMenuInner(agent)) {
+                this.InventoryContextMenuEvent30Hook!.Original(agent, a2, a3, a4, a5);
+            }
         }
     }
 }

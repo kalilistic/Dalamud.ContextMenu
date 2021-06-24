@@ -8,9 +8,6 @@ namespace XivCommon.Functions.ContextMenu {
         /// <summary>
         /// Create a new custom context menu item that will open a submenu.
         /// </summary>
-        /// <summary>
-        /// Create a new context menu item for inventory items.
-        /// </summary>
         /// <param name="name">the English name of the item, copied to other languages</param>
         /// <param name="action">the action to perform on click</param>
         public ContextSubMenuItem(SeString name, ContextMenu.ContextMenuOpenEventDelegate action) : base(name, action) {
