@@ -279,6 +279,16 @@ namespace XivCommon.Functions.ContextMenu {
             return Encoding.UTF8.GetString(Util.ReadTerminated(parentAddon + 8));
         }
 
+        private unsafe IntPtr GetAddonFromAgent(IntPtr agent) {
+            var addonId = *(byte*) (agent + 0x20);
+            if (addonId == 0) {
+                return IntPtr.Zero;
+            }
+
+            var stage = (AtkStage*) this.Functions.GetAtkStageSingleton();
+            return this._getAddonByInternalId((IntPtr) stage->RaptureAtkUnitManager, addonId);
+        }
+
         private unsafe (uint actorId, uint contentIdLower, SeString? text, ushort actorWorld) GetAgentInfo(IntPtr agent) {
             var actorId = *(uint*) (agent + ActorIdOffset);
             var contentIdLower = *(uint*) (agent + ContentIdLowerOffset);
@@ -658,11 +668,12 @@ namespace XivCommon.Functions.ContextMenu {
                 var size = *(ushort*) secondaryArgsPtr;
 
                 var info = this.GetAgentInfo(agent);
+                var addon = this.GetAddonFromAgent(agent);
 
                 var args = new ContextMenuOpenArgs(
-                    IntPtr.Zero,
+                    addon,
                     agent,
-                    string.Empty,
+                    this.GetParentAddonName(addon),
                     info.actorId,
                     info.contentIdLower,
                     info.text,
