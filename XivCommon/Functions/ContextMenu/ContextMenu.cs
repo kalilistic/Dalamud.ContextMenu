@@ -742,7 +742,7 @@ namespace XivCommon.Functions.ContextMenu {
                     var item = this.Items[i];
 
                     *(ushort*) secondaryArgsPtr += 1;
-                    var arg = &submenuArgs[size + i];
+                    var arg = &submenuArgs[size + i + wasSelected];
                     this._atkValueChangeType(arg, ValueType.String);
                     var itemName = this.GetItemName(item);
                     fixed (byte* namePtr = itemName.Encode().Terminate()) {
