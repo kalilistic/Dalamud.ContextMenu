@@ -15,10 +15,11 @@ namespace XivCommon.Functions.ContextMenu {
         /// </summary>
         public SeString Name { get; set; }
 
-        internal NativeContextMenuItem(byte action, SeString name, bool enabled) {
+        internal NativeContextMenuItem(byte action, SeString name, bool enabled, bool isSubMenu) {
             this.Name = name;
             this.InternalAction = action;
             this.Enabled = enabled;
+            this.IsSubMenu = isSubMenu;
         }
     }
 }

@@ -21,6 +21,8 @@ namespace XivCommon.Functions.ContextMenu {
             internal const string SomeOpenAddonThing = "E8 ?? ?? ?? ?? 0F B7 C0 48 83 C4 60";
             internal const string ContextMenuOpen = "48 8B C4 57 41 56 41 57 48 81 EC ?? ?? ?? ??";
             internal const string ContextMenuSelected = "48 89 5C 24 ?? 55 57 41 56 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 44 24 ?? 80 B9 ?? ?? ?? ?? ??";
+            internal const string ContextMenuEvent66 = "E8 ?? ?? ?? ?? 44 39 A3 ?? ?? ?? ?? 0F 84 ?? ?? ?? ??";
+            internal const string SetUpContextSubMenu = "E8 ?? ?? ?? ?? 44 39 A3 ?? ?? ?? ?? 0F 86 ?? ?? ?? ??";
             internal const string TitleContextMenuOpen = "48 8B C4 57 41 55 41 56 48 81 EC ?? ?? ?? ??";
             internal const string AtkValueChangeType = "E8 ?? ?? ?? ?? 45 84 F6 48 8D 4C 24 ??";
             internal const string AtkValueSetString = "E8 ?? ?? ?? ?? 41 03 ED";
@@ -45,6 +47,11 @@ namespace XivCommon.Functions.ContextMenu {
         /// Offset from agent to actions byte array pointer (have to add the actions offset after)
         /// </summary>
         private const int MenuActionsPointerOffset = 0xD18;
+
+        /// <summary>
+        /// SetUpContextSubMenu checks this
+        /// </summary>
+        private const int BooleanOffsetCheck = 0x690;
 
         /// <summary>
         /// Offset from [MenuActionsPointer] to actions byte array
@@ -130,6 +137,14 @@ namespace XivCommon.Functions.ContextMenu {
 
         private Hook<ContextMenuItemSelectedInternalDelegate>? ContextMenuItemSelectedHook { get; }
 
+        private delegate byte SetUpContextSubMenuDelegate(IntPtr agent);
+
+        private readonly SetUpContextSubMenuDelegate _setUpContextSubMenu = null!;
+
+        private delegate byte ContextMenuEvent66Delegate(IntPtr agent);
+
+        private Hook<ContextMenuEvent66Delegate>? ContextMenuEvent66Hook { get; }
+
         private unsafe delegate void AtkValueChangeTypeDelegate(AtkValue* thisPtr, ValueType type);
 
         private readonly AtkValueChangeTypeDelegate _atkValueChangeType = null!;
@@ -172,6 +187,12 @@ namespace XivCommon.Functions.ContextMenu {
                 return;
             }
 
+            if (scanner.TryScanText(Signatures.SetUpContextSubMenu, out var setUpSubPtr, "Context Menu (set up submenu)")) {
+                this._setUpContextSubMenu = Marshal.GetDelegateForFunctionPointer<SetUpContextSubMenuDelegate>(setUpSubPtr);
+            } else {
+                return;
+            }
+
             if (scanner.TryScanText(Signatures.SomeOpenAddonThing, out var thingPtr, "Context Menu (some OpenAddon thing)")) {
                 this.SomeOpenAddonThingHook = new Hook<SomeOpenAddonThingDelegate>(thingPtr, new SomeOpenAddonThingDelegate(this.SomeOpenAddonThingDetour));
                 this.SomeOpenAddonThingHook.Enable();
@@ -201,6 +222,11 @@ namespace XivCommon.Functions.ContextMenu {
 
                 this.TitleContextMenuOpenHook.Enable();
             }
+
+            if (scanner.TryScanText(Signatures.ContextMenuEvent66, out var event66Ptr, "Context Menu (event 66)")) {
+                this.ContextMenuEvent66Hook = new Hook<ContextMenuEvent66Delegate>(event66Ptr, new ContextMenuEvent66Delegate(this.ContextMenuEvent66Detour));
+                this.ContextMenuEvent66Hook.Enable();
+            }
         }
 
         /// <inheritdoc />
@@ -209,6 +235,7 @@ namespace XivCommon.Functions.ContextMenu {
             this.ContextMenuOpenHook?.Dispose();
             this.TitleContextMenuOpenHook?.Enable();
             this.ContextMenuItemSelectedHook?.Dispose();
+            this.ContextMenuEvent66Hook?.Dispose();
         }
 
         private IntPtr SomeOpenAddonThingDetour(IntPtr a1, IntPtr a2, IntPtr a3, uint a4, IntPtr a5, IntPtr a6, IntPtr a7, ushort a8) {
@@ -217,7 +244,10 @@ namespace XivCommon.Functions.ContextMenu {
         }
 
         private unsafe byte TitleContextMenuOpenDetour(IntPtr addon, int menuSize, AtkValue* atkValueArgs) {
-            this.Items.Clear();
+            if (this.SubMenuTitle == IntPtr.Zero) {
+                this.Items.Clear();
+            }
+
             return this.TitleContextMenuOpenHook!.Original(addon, menuSize, atkValueArgs);
         }
 
@@ -308,6 +338,7 @@ namespace XivCommon.Functions.ContextMenu {
 
         private unsafe void OpenMenuDetourInner(IntPtr addon, ref int menuSize, ref AtkValue* atkValueArgs) {
             this.Items.Clear();
+            this.FreeSubMenuTitle();
 
             var (agentType, agent) = this.GetContextMenuAgent();
             if (agent == IntPtr.Zero) {
@@ -321,10 +352,15 @@ namespace XivCommon.Functions.ContextMenu {
             atkValueArgs = this.ExpandContextMenuArray(addon);
 
             var inventory = agentType == AgentType.Inventory;
+            var offset = ContextMenuItemOffset + (inventory ? 0 : *(long*) (agent + BooleanOffsetCheck) != 0 ? 1 : 0);
 
             this.NormalSize = (int) (&atkValueArgs[0])->UInt;
 
-            var hasGameDisabled = menuSize - ContextMenuItemOffset - this.NormalSize > 0;
+            // idx 3 is bitmask of indices that are submenus
+            var submenuArg = &atkValueArgs[3];
+            var submenus = (int) submenuArg->UInt;
+
+            var hasGameDisabled = menuSize - offset - this.NormalSize > 0;
 
             var addonName = this.GetParentAddonName(addon);
 
@@ -334,19 +370,21 @@ namespace XivCommon.Functions.ContextMenu {
 
             var nativeItems = new List<NativeContextMenuItem>();
             for (var i = 0; i < this.NormalSize; i++) {
-                var atkItem = &atkValueArgs[ContextMenuItemOffset + i];
+                var atkItem = &atkValueArgs[offset + i];
 
                 var name = Util.ReadSeString((IntPtr) atkItem->String, this.SeStringManager);
 
                 var enabled = true;
                 if (hasGameDisabled) {
-                    var disabledItem = &atkValueArgs[ContextMenuItemOffset + this.NormalSize + i];
+                    var disabledItem = &atkValueArgs[offset + this.NormalSize + i];
                     enabled = disabledItem->Int == 0;
                 }
 
-                var action = *(menuActions + ContextMenuItemOffset + i);
+                var action = *(menuActions + offset + i);
 
-                nativeItems.Add(new NativeContextMenuItem(action, name, enabled));
+                var isSubMenu = (submenus & (1 << i)) > 0;
+
+                nativeItems.Add(new NativeContextMenuItem(action, name, enabled, isSubMenu));
             }
 
             if (inventory) {
@@ -423,45 +461,36 @@ namespace XivCommon.Functions.ContextMenu {
             var hasCustomDisabled = this.Items.Any(item => !item.Enabled);
             var hasAnyDisabled = hasGameDisabled || hasCustomDisabled;
 
+            // clear all submenu flags
+            submenuArg->UInt = 0;
+
             for (var i = 0; i < this.Items.Count; i++) {
                 var item = this.Items[i];
 
                 if (hasAnyDisabled) {
-                    var disabledArg = &atkValueArgs[ContextMenuItemOffset + this.Items.Count + i];
+                    var disabledArg = &atkValueArgs[offset + this.Items.Count + i];
                     this._atkValueChangeType(disabledArg, ValueType.Int);
                     disabledArg->Int = item.Enabled ? 0 : 1;
                 }
 
                 // set up the agent to take the appropriate action for this item
-                *(menuActions + ContextMenuItemOffset + i) = item switch {
+                *(menuActions + offset + i) = item switch {
                     NativeContextMenuItem nativeItem => nativeItem.InternalAction,
+                    ContextSubMenuItem => 0x66,
                     _ => inventory ? InventoryNoopContextId : NoopContextId,
                 };
 
+                // set submenu flag
+                if (item.IsSubMenu) {
+                    submenuArg->UInt |= (uint) (1 << i);
+                }
+
                 // set up the menu item
-                var newItem = &atkValueArgs[ContextMenuItemOffset + i];
+                var newItem = &atkValueArgs[offset + i];
                 this._atkValueChangeType(newItem, ValueType.String);
 
-                var name = item switch {
-                    NormalContextMenuItem custom => this.Language switch {
-                        ClientLanguage.Japanese => custom.NameJapanese,
-                        ClientLanguage.English => custom.NameEnglish,
-                        ClientLanguage.German => custom.NameGerman,
-                        ClientLanguage.French => custom.NameFrench,
-                        _ => custom.NameEnglish,
-                    },
-                    InventoryContextMenuItem custom => this.Language switch {
-                        ClientLanguage.Japanese => custom.NameJapanese,
-                        ClientLanguage.English => custom.NameEnglish,
-                        ClientLanguage.German => custom.NameGerman,
-                        ClientLanguage.French => custom.NameFrench,
-                        _ => custom.NameEnglish,
-                    },
-                    NativeContextMenuItem native => native.Name,
-                    _ => "Invalid context menu item",
-                };
-                var nameBytes = name.Encode().Terminate();
-                fixed (byte* nameBytesPtr = nameBytes) {
+                var name = this.GetItemName(item);
+                fixed (byte* nameBytesPtr = name.Encode().Terminate()) {
                     this._atkValueSetString(newItem, nameBytesPtr);
                 }
             }
@@ -473,16 +502,52 @@ namespace XivCommon.Functions.ContextMenu {
                 menuSize *= 2;
             }
 
-            menuSize += ContextMenuItemOffset;
+            menuSize += offset;
         }
 
+        private SeString GetItemName(BaseContextMenuItem item) {
+            return item switch {
+                NormalContextMenuItem custom => this.Language switch {
+                    ClientLanguage.Japanese => custom.NameJapanese,
+                    ClientLanguage.English => custom.NameEnglish,
+                    ClientLanguage.German => custom.NameGerman,
+                    ClientLanguage.French => custom.NameFrench,
+                    _ => custom.NameEnglish,
+                },
+                InventoryContextMenuItem custom => this.Language switch {
+                    ClientLanguage.Japanese => custom.NameJapanese,
+                    ClientLanguage.English => custom.NameEnglish,
+                    ClientLanguage.German => custom.NameGerman,
+                    ClientLanguage.French => custom.NameFrench,
+                    _ => custom.NameEnglish,
+                },
+                ContextSubMenuItem custom => this.Language switch {
+                    ClientLanguage.Japanese => custom.NameJapanese,
+                    ClientLanguage.English => custom.NameEnglish,
+                    ClientLanguage.German => custom.NameGerman,
+                    ClientLanguage.French => custom.NameFrench,
+                    _ => custom.NameEnglish,
+                },
+                NativeContextMenuItem native => native.Name,
+                _ => "Invalid context menu item",
+            };
+        }
+
+        private ContextSubMenuItem? SubMenuItem { get; set; }
+
         private byte ItemSelectedDetour(IntPtr addon, int index, byte a3) {
+            this.FreeSubMenuTitle();
+
             if (index < 0 || index >= this.Items.Count) {
                 goto Original;
             }
 
             var item = this.Items[index];
             switch (item) {
+                case ContextSubMenuItem sub: {
+                    this.SubMenuItem = sub;
+                    break;
+                }
                 // a custom item is being clicked
                 case NormalContextMenuItem custom: {
                     var addonName = this.GetParentAddonName(addon);
@@ -531,6 +596,113 @@ namespace XivCommon.Functions.ContextMenu {
 
             Original:
             return this.ContextMenuItemSelectedHook!.Original(addon, index, a3);
+        }
+
+        private IntPtr SubMenuTitle { get; set; } = IntPtr.Zero;
+
+        private void FreeSubMenuTitle() {
+            if (this.SubMenuTitle == IntPtr.Zero) {
+                return;
+            }
+
+            this.Functions.UiAlloc.Free(this.SubMenuTitle);
+            this.SubMenuTitle = IntPtr.Zero;
+        }
+
+        private unsafe byte ContextMenuEvent66Detour(IntPtr agent) {
+            if (this.SubMenuItem == null) {
+                return this.ContextMenuEvent66Hook!.Original(agent);
+            }
+
+            // free our workaround pointer
+            this.FreeSubMenuTitle();
+
+            this.Items.Clear();
+
+            try {
+                // this will attempt to read the header from the agent
+                // we don't currently update the agent with our new items, so let's just work around it
+                var name = this.Language switch {
+                    ClientLanguage.Japanese => this.SubMenuItem.NameJapanese,
+                    ClientLanguage.English => this.SubMenuItem.NameEnglish,
+                    ClientLanguage.German => this.SubMenuItem.NameGerman,
+                    ClientLanguage.French => this.SubMenuItem.NameFrench,
+                    _ => this.SubMenuItem.NameEnglish,
+                };
+
+                // Since the game checks the agent's AtkValue array for the submenu title, and since we
+                // don't update that array, we need to work around this check.
+                // First, we will convince the game to make the submenu title pointer null by telling it
+                // that an invalid index was selected.
+                // Second, we will replace the null pointer with our own pointer.
+                // Third, we will restore the original selected index.
+
+                // step 1
+                var selectedIdx = (byte*) (agent + 0x670);
+                var wasSelected = *selectedIdx;
+                *selectedIdx = 0xFF;
+                this._setUpContextSubMenu(agent);
+
+                // step 2 (see SetUpContextSubMenu)
+                var nameBytes = name.Encode().Terminate();
+                this.SubMenuTitle = this.Functions.UiAlloc.Alloc((ulong) nameBytes.Length);
+                Marshal.Copy(nameBytes, 0, this.SubMenuTitle, nameBytes.Length);
+                var v10 = agent + 0x678 * *(byte*) (agent + 0x1740) + 0x28;
+                *(byte**) (v10 + 0x668) = (byte*) this.SubMenuTitle;
+
+                // step 3
+                *selectedIdx = wasSelected;
+
+                var secondaryArgsPtr = Marshal.ReadIntPtr(agent + MenuActionsPointerOffset);
+                var submenuArgs = (AtkValue*) (secondaryArgsPtr + 8);
+                var size = *(ushort*) secondaryArgsPtr;
+
+                var info = this.GetAgentInfo(agent);
+
+                var args = new ContextMenuOpenArgs(
+                    IntPtr.Zero,
+                    agent,
+                    string.Empty,
+                    info.actorId,
+                    info.contentIdLower,
+                    info.text,
+                    info.actorWorld
+                );
+                this.SubMenuItem.Action(args);
+                // remove any InventoryContextMenuItems that may have been added - these will crash the game
+                args.Items.RemoveAll(item => item is InventoryContextMenuItem);
+
+                // set the agent of any remaining custom items
+                foreach (var item in args.Items) {
+                    if (item is NormalContextMenuItem custom) {
+                        custom.Agent = agent;
+                    }
+                }
+
+                this.Items.AddRange(args.Items);
+
+                var booleanOffset = *(long*) (agent + *(byte*) (agent + 0x1740) * 0x678 + 0x690) != 0 ? 1 : 0;
+
+                for (var i = 0; i < args.Items.Count; i++) {
+                    var item = args.Items[i];
+
+                    *(ushort*) secondaryArgsPtr += 1;
+                    var arg = &submenuArgs[size + i];
+                    this._atkValueChangeType(arg, ValueType.String);
+                    var itemName = this.GetItemName(item);
+                    fixed (byte* namePtr = itemName.Encode().Terminate()) {
+                        this._atkValueSetString(arg, namePtr);
+                    }
+
+                    // set action to no-op
+                    *(byte*) (secondaryArgsPtr + booleanOffset + i + ContextMenuItemOffset + 0x428) = NoopContextId;
+                }
+            } finally {
+                this.SubMenuItem = null;
+            }
+
+
+            return 0;
         }
     }
 }
