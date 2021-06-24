@@ -233,7 +233,7 @@ namespace XivCommon.Functions.ContextMenu {
         public void Dispose() {
             this.SomeOpenAddonThingHook?.Dispose();
             this.ContextMenuOpenHook?.Dispose();
-            this.TitleContextMenuOpenHook?.Enable();
+            this.TitleContextMenuOpenHook?.Dispose();
             this.ContextMenuItemSelectedHook?.Dispose();
             this.ContextMenuEvent66Hook?.Dispose();
         }
