@@ -1,4 +1,5 @@
-﻿using Dalamud.Game.Text.SeStringHandling;
+﻿using System;
+using Dalamud.Game.Text.SeStringHandling;
 
 namespace XivCommon.Functions.ContextMenu.Inventory {
     /// <summary>
@@ -10,6 +11,7 @@ namespace XivCommon.Functions.ContextMenu.Inventory {
         /// </summary>
         /// <param name="name">the English name of the item, copied to other languages</param>
         /// <param name="action">the action to perform on click</param>
+        [Obsolete("Inventory context submenus do not work yet", true)]
         public InventoryContextSubMenuItem(SeString name, ContextMenu.InventoryContextMenuOpenEventDelegate action) : base(name, action) {
         }
     }

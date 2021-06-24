@@ -205,11 +205,12 @@ namespace XivCommon.Functions.ContextMenu {
                 return;
             }
 
-            if (scanner.TryScanText(Signatures.SetUpInventoryContextSubMenu, out var setUpInvSubPtr, "Context Menu (set up inventory submenu)")) {
-                this._setUpInventoryContextSubMenu = Marshal.GetDelegateForFunctionPointer<SetUpInventoryContextSubMenuDelegate>(setUpInvSubPtr);
-            } else {
-                return;
-            }
+            // TODO: uncomment when inv submenus
+            // if (scanner.TryScanText(Signatures.SetUpInventoryContextSubMenu, out var setUpInvSubPtr, "Context Menu (set up inventory submenu)")) {
+            //     this._setUpInventoryContextSubMenu = Marshal.GetDelegateForFunctionPointer<SetUpInventoryContextSubMenuDelegate>(setUpInvSubPtr);
+            // } else {
+            //     return;
+            // }
 
             if (scanner.TryScanText(Signatures.SomeOpenAddonThing, out var thingPtr, "Context Menu (some OpenAddon thing)")) {
                 this.SomeOpenAddonThingHook = new Hook<SomeOpenAddonThingDelegate>(thingPtr, new SomeOpenAddonThingDelegate(this.SomeOpenAddonThingDetour));
@@ -246,10 +247,11 @@ namespace XivCommon.Functions.ContextMenu {
                 this.ContextMenuEvent66Hook.Enable();
             }
 
-            if (scanner.TryScanText(Signatures.InventoryContextMenuEvent30, out var event30Ptr, "Context Menu (inv event 30)")) {
-                this.InventoryContextMenuEvent30Hook = new Hook<InventoryContextMenuEvent30Delegate>(event30Ptr, new InventoryContextMenuEvent30Delegate(this.InventoryContextMenuEvent30Detour));
-                this.InventoryContextMenuEvent30Hook.Enable();
-            }
+            // TODO: uncomment when inv submenus
+            // if (scanner.TryScanText(Signatures.InventoryContextMenuEvent30, out var event30Ptr, "Context Menu (inv event 30)")) {
+            //     this.InventoryContextMenuEvent30Hook = new Hook<InventoryContextMenuEvent30Delegate>(event30Ptr, new InventoryContextMenuEvent30Delegate(this.InventoryContextMenuEvent30Detour));
+            //     this.InventoryContextMenuEvent30Hook.Enable();
+            // }
         }
 
         /// <inheritdoc />
@@ -443,8 +445,9 @@ namespace XivCommon.Functions.ContextMenu {
                 // set up the agent to take the appropriate action for this item
                 *(menuActions + offset + i) = item switch {
                     NativeContextMenuItem nativeItem => nativeItem.InternalAction,
-                    ContextSubMenuItem => ContextSubId,
-                    InventoryContextSubMenuItem => InventoryContextSubId,
+                    NormalContextSubMenuItem => ContextSubId,
+                    // TODO: uncomment when inv submenus
+                    // InventoryContextSubMenuItem => InventoryContextSubId,
                     _ => inventory ? InventoryNoopContextId : NoopContextId,
                 };
 
@@ -476,6 +479,10 @@ namespace XivCommon.Functions.ContextMenu {
         /// <returns>true on error</returns>
         private bool PopulateItems(IntPtr addon, IntPtr agent, ContextMenuOpenEventDelegate? normalAction, InventoryContextMenuOpenEventDelegate? inventoryAction, IReadOnlyCollection<NativeContextMenuItem>? nativeItems = null) {
             var (agentType, _) = this.GetContextMenuAgent(agent);
+            if (agentType == AgentType.Unknown) {
+                return true;
+            }
+
             var inventory = agentType == AgentType.Inventory;
             var parentAddonName = this.GetParentAddonName(addon);
 
@@ -549,7 +556,7 @@ namespace XivCommon.Functions.ContextMenu {
                         case NormalContextMenuItem custom:
                             custom.Agent = agent;
                             break;
-                        case ContextSubMenuItem custom:
+                        case NormalContextSubMenuItem custom:
                             custom.Agent = agent;
                             break;
                     }
@@ -583,7 +590,7 @@ namespace XivCommon.Functions.ContextMenu {
                     ClientLanguage.French => custom.NameFrench,
                     _ => custom.NameEnglish,
                 },
-                ContextSubMenuItem custom => this.Language switch {
+                NormalContextSubMenuItem custom => this.Language switch {
                     ClientLanguage.Japanese => custom.NameJapanese,
                     ClientLanguage.English => custom.NameEnglish,
                     ClientLanguage.German => custom.NameGerman,
@@ -613,7 +620,7 @@ namespace XivCommon.Functions.ContextMenu {
 
             var item = this.Items[index];
             switch (item) {
-                case ContextSubMenuItem sub: {
+                case NormalContextSubMenuItem sub: {
                     this.SubMenuItem = sub;
                     break;
                 }
@@ -723,7 +730,7 @@ namespace XivCommon.Functions.ContextMenu {
                 var size = *(ushort*) secondaryArgsPtr;
 
                 var addon = this.GetAddonFromAgent(agent);
-                var normalAction = (this.SubMenuItem as ContextSubMenuItem)?.Action;
+                var normalAction = (this.SubMenuItem as NormalContextSubMenuItem)?.Action;
                 var inventoryAction = (this.SubMenuItem as InventoryContextSubMenuItem)?.Action;
                 if (this.PopulateItems(addon, agent, normalAction, inventoryAction)) {
                     return true;
