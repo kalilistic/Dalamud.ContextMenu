@@ -694,66 +694,64 @@ namespace XivCommon.Functions.ContextMenu {
                 return false;
             }
 
+            var subMenuItem = this.SubMenuItem;
+            this.SubMenuItem = null;
+
             // free our workaround pointer
             this.FreeSubMenuTitle();
 
             this.Items.Clear();
 
-            try {
-                var name = this.GetItemName(this.SubMenuItem);
+            var name = this.GetItemName(subMenuItem);
 
-                // Since the game checks the agent's AtkValue array for the submenu title, and since we
-                // don't update that array, we need to work around this check.
-                // First, we will convince the game to make the submenu title pointer null by telling it
-                // that an invalid index was selected.
-                // Second, we will replace the null pointer with our own pointer.
-                // Third, we will restore the original selected index.
+            // Since the game checks the agent's AtkValue array for the submenu title, and since we
+            // don't update that array, we need to work around this check.
+            // First, we will convince the game to make the submenu title pointer null by telling it
+            // that an invalid index was selected.
+            // Second, we will replace the null pointer with our own pointer.
+            // Third, we will restore the original selected index.
 
-                // step 1
-                var selectedIdx = (byte*) (agent + 0x670);
-                var wasSelected = *selectedIdx;
-                *selectedIdx = 0xFF;
-                this._setUpContextSubMenu(agent);
+            // step 1
+            var selectedIdx = (byte*) (agent + 0x670);
+            var wasSelected = *selectedIdx;
+            *selectedIdx = 0xFF;
+            this._setUpContextSubMenu(agent);
 
-                // step 2 (see SetUpContextSubMenu)
-                var nameBytes = name.Encode().Terminate();
-                this.SubMenuTitle = this.Functions.UiAlloc.Alloc((ulong) nameBytes.Length);
-                Marshal.Copy(nameBytes, 0, this.SubMenuTitle, nameBytes.Length);
-                var v10 = agent + 0x678 * *(byte*) (agent + 0x1740) + 0x28;
-                *(byte**) (v10 + 0x668) = (byte*) this.SubMenuTitle;
+            // step 2 (see SetUpContextSubMenu)
+            var nameBytes = name.Encode().Terminate();
+            this.SubMenuTitle = this.Functions.UiAlloc.Alloc((ulong) nameBytes.Length);
+            Marshal.Copy(nameBytes, 0, this.SubMenuTitle, nameBytes.Length);
+            var v10 = agent + 0x678 * *(byte*) (agent + 0x1740) + 0x28;
+            *(byte**) (v10 + 0x668) = (byte*) this.SubMenuTitle;
 
-                // step 3
-                *selectedIdx = wasSelected;
+            // step 3
+            *selectedIdx = wasSelected;
 
-                var secondaryArgsPtr = Marshal.ReadIntPtr(agent + MenuActionsPointerOffset);
-                var submenuArgs = (AtkValue*) (secondaryArgsPtr + 8);
-                var size = *(ushort*) secondaryArgsPtr;
+            var secondaryArgsPtr = Marshal.ReadIntPtr(agent + MenuActionsPointerOffset);
+            var submenuArgs = (AtkValue*) (secondaryArgsPtr + 8);
 
-                var addon = this.GetAddonFromAgent(agent);
-                var normalAction = (this.SubMenuItem as NormalContextSubMenuItem)?.Action;
-                var inventoryAction = (this.SubMenuItem as InventoryContextSubMenuItem)?.Action;
-                if (this.PopulateItems(addon, agent, normalAction, inventoryAction)) {
-                    return true;
+            var addon = this.GetAddonFromAgent(agent);
+            var normalAction = (subMenuItem as NormalContextSubMenuItem)?.Action;
+            var inventoryAction = (subMenuItem as InventoryContextSubMenuItem)?.Action;
+            if (this.PopulateItems(addon, agent, normalAction, inventoryAction)) {
+                return true;
+            }
+
+            var booleanOffset = *(long*) (agent + *(byte*) (agent + 0x1740) * 0x678 + 0x690) != 0 ? 1 : 0;
+
+            for (var i = 0; i < this.Items.Count; i++) {
+                var item = this.Items[i];
+
+                *(ushort*) secondaryArgsPtr += 1;
+                var arg = &submenuArgs[ContextMenuItemOffset + i + 1];
+                this._atkValueChangeType(arg, ValueType.String);
+                var itemName = this.GetItemName(item);
+                fixed (byte* namePtr = itemName.Encode().Terminate()) {
+                    this._atkValueSetString(arg, namePtr);
                 }
 
-                var booleanOffset = *(long*) (agent + *(byte*) (agent + 0x1740) * 0x678 + 0x690) != 0 ? 1 : 0;
-
-                for (var i = 0; i < this.Items.Count; i++) {
-                    var item = this.Items[i];
-
-                    *(ushort*) secondaryArgsPtr += 1;
-                    var arg = &submenuArgs[size + i + wasSelected];
-                    this._atkValueChangeType(arg, ValueType.String);
-                    var itemName = this.GetItemName(item);
-                    fixed (byte* namePtr = itemName.Encode().Terminate()) {
-                        this._atkValueSetString(arg, namePtr);
-                    }
-
-                    // set action to no-op
-                    *(byte*) (secondaryArgsPtr + booleanOffset + i + ContextMenuItemOffset + 0x428) = NoopContextId;
-                }
-            } finally {
-                this.SubMenuItem = null;
+                // set action to no-op
+                *(byte*) (secondaryArgsPtr + booleanOffset + i + ContextMenuItemOffset + 0x428) = NoopContextId;
             }
 
             return true;
