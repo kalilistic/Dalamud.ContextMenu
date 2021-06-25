@@ -58,7 +58,12 @@ namespace XivCommon.Functions.NamePlates {
         public ByteColor Colour { get; set; }
 
         /// <summary>
+        /// <para>
         /// The type of this name plate.
+        /// </para>
+        /// <para>
+        /// Changing this without setting the appropriate fields can cause the game to crash.
+        /// </para>
         /// </summary>
         public PlateType Type { get; set; }
 
