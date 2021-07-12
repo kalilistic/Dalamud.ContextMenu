@@ -79,6 +79,11 @@ namespace XivCommon {
         /// </summary>
         public NamePlates NamePlates { get; }
 
+        /// <summary>
+        /// Duty Finder functions
+        /// </summary>
+        public DutyFinder DutyFinder { get; }
+
         internal GameFunctions(Hooks hooks, DalamudPluginInterface @interface) {
             this.Interface = @interface;
 
@@ -98,6 +103,7 @@ namespace XivCommon {
             this.ContextMenu = new ContextMenu(this, scanner, seStringManager, @interface.ClientState.ClientLanguage, hooks);
             this.Tooltips = new Tooltips(scanner, @interface.Framework, @interface.Framework.Gui, seStringManager, hooks.HasFlag(Hooks.Tooltips));
             this.NamePlates = new NamePlates(this, scanner, seStringManager, hooks.HasFlag(Hooks.NamePlates));
+            this.DutyFinder = new DutyFinder(this, scanner);
 
             if (scanner.TryScanText(Signatures.GetAgentByInternalId, out var byInternalIdPtr, "GetAgentByInternalId")) {
                 this.GetAgentByInternalIdInternal = Marshal.GetDelegateForFunctionPointer<GetAgentByInternalIdDelegate>(byInternalIdPtr);
