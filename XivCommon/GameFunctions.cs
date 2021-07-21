@@ -84,6 +84,11 @@ namespace XivCommon {
         /// </summary>
         public DutyFinder DutyFinder { get; }
 
+        /// <summary>
+        /// Journal functions
+        /// </summary>
+        public Journal Journal { get; }
+
         internal GameFunctions(Hooks hooks, DalamudPluginInterface @interface) {
             this.Interface = @interface;
 
@@ -104,6 +109,7 @@ namespace XivCommon {
             this.Tooltips = new Tooltips(scanner, @interface.Framework, @interface.Framework.Gui, seStringManager, hooks.HasFlag(Hooks.Tooltips));
             this.NamePlates = new NamePlates(this, scanner, seStringManager, hooks.HasFlag(Hooks.NamePlates));
             this.DutyFinder = new DutyFinder(this, scanner);
+            this.Journal = new Journal(this, scanner);
 
             if (scanner.TryScanText(Signatures.GetAgentByInternalId, out var byInternalIdPtr, "GetAgentByInternalId")) {
                 this.GetAgentByInternalIdInternal = Marshal.GetDelegateForFunctionPointer<GetAgentByInternalIdDelegate>(byInternalIdPtr);

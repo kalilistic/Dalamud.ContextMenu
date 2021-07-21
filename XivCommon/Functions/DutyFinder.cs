@@ -39,6 +39,7 @@ namespace XivCommon.Functions {
         /// Opens the Duty Finder to the given duty.
         /// </summary>
         /// <param name="condition">duty to show</param>
+        /// <exception cref="InvalidOperationException">if the open duty function could not be found in memory</exception>
         public void OpenDuty(ContentFinderCondition condition) {
             this.OpenDuty(condition.RowId);
         }
@@ -47,6 +48,7 @@ namespace XivCommon.Functions {
         /// Opens the Duty Finder to the given duty ID.
         /// </summary>
         /// <param name="contentFinderCondition">ID of duty to show</param>
+        /// <exception cref="InvalidOperationException">if the open duty function could not be found in memory</exception>
         public void OpenDuty(uint contentFinderCondition) {
             if (this._openDuty == null) {
                 throw new InvalidOperationException("Could not find signature for open duty function");
