@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using Dalamud.Game;
+using Dalamud.Game.ClientState;
 using Dalamud.Game.ClientState.Actors.Types;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Hooking;
-using Dalamud.Plugin;
 
 namespace XivCommon.Functions {
     /// <summary>
@@ -16,7 +16,7 @@ namespace XivCommon.Functions {
             internal const string ChatBubbleUpdate = "48 85 D2 0F 84 ?? ?? ?? ?? 48 89 5C 24 ?? 57 48 83 EC 20 8B 41 0C";
         }
 
-        private Dalamud.Dalamud Dalamud { get; }
+        private ClientState ClientState { get; }
         private SeStringManager SeStringManager { get; }
 
         private delegate void OpenChatBubbleDelegate(IntPtr manager, IntPtr actor, IntPtr text, byte a4);
@@ -57,8 +57,8 @@ namespace XivCommon.Functions {
         /// </summary>
         public event OnUpdateChatBubbleDelegate? OnUpdateBubble;
 
-        internal ChatBubbles(Dalamud.Dalamud dalamud, SigScanner scanner, SeStringManager manager, bool hookEnabled) {
-            this.Dalamud = dalamud;
+        internal ChatBubbles(ClientState clientState, SigScanner scanner, SeStringManager manager, bool hookEnabled) {
+            this.ClientState = clientState;
             this.SeStringManager = manager;
 
             if (!hookEnabled) {
@@ -66,12 +66,12 @@ namespace XivCommon.Functions {
             }
 
             if (scanner.TryScanText(Signatures.ChatBubbleOpen, out var openPtr, "chat bubbles open")) {
-                this.OpenChatBubbleHook = new Hook<OpenChatBubbleDelegate>(openPtr, new OpenChatBubbleDelegate(this.OpenChatBubbleDetour));
+                this.OpenChatBubbleHook = new Hook<OpenChatBubbleDelegate>(openPtr, this.OpenChatBubbleDetour);
                 this.OpenChatBubbleHook.Enable();
             }
 
             if (scanner.TryScanText(Signatures.ChatBubbleUpdate, out var updatePtr, "chat bubbles update")) {
-                this.UpdateChatBubbleHook = new Hook<UpdateChatBubbleDelegate>(updatePtr + 9, new UpdateChatBubbleDelegate(this.UpdateChatBubbleDetour));
+                this.UpdateChatBubbleHook = new Hook<UpdateChatBubbleDelegate>(updatePtr + 9, this.UpdateChatBubbleDetour);
                 this.UpdateChatBubbleHook.Enable();
             }
         }
@@ -92,8 +92,7 @@ namespace XivCommon.Functions {
         }
 
         private void OpenChatBubbleDetourInner(IntPtr manager, IntPtr actorPtr, IntPtr textPtr, byte a4) {
-            var actorStruct = Marshal.PtrToStructure<Dalamud.Game.ClientState.Structs.Actor>(actorPtr);
-            var actor = new Actor(actorPtr, actorStruct, this.Dalamud);
+            var actor = this.ClientState.Actors.CreateActorReference(actorPtr);
 
             var text = Util.ReadSeString(textPtr, this.SeStringManager);
 
@@ -123,8 +122,7 @@ namespace XivCommon.Functions {
 
         private void UpdateChatBubbleDetourInner(IntPtr bubblePtr, IntPtr actorPtr) {
             // var bubble = (ChatBubble*) bubblePtr;
-            var actorStruct = Marshal.PtrToStructure<Dalamud.Game.ClientState.Structs.Actor>(actorPtr);
-            var actor = new Actor(actorPtr, actorStruct, this.Dalamud);
+            var actor = this.ClientState.Actors.CreateActorReference(actorPtr);
 
             try {
                 this.OnUpdateBubble?.Invoke(ref actor);

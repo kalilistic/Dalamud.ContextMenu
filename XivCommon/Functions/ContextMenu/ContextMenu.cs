@@ -213,7 +213,7 @@ namespace XivCommon.Functions.ContextMenu {
             // }
 
             if (scanner.TryScanText(Signatures.SomeOpenAddonThing, out var thingPtr, "Context Menu (some OpenAddon thing)")) {
-                this.SomeOpenAddonThingHook = new Hook<SomeOpenAddonThingDelegate>(thingPtr, new SomeOpenAddonThingDelegate(this.SomeOpenAddonThingDetour));
+                this.SomeOpenAddonThingHook = new Hook<SomeOpenAddonThingDelegate>(thingPtr, this.SomeOpenAddonThingDetour);
                 this.SomeOpenAddonThingHook.Enable();
             } else {
                 return;
@@ -221,7 +221,7 @@ namespace XivCommon.Functions.ContextMenu {
 
             if (scanner.TryScanText(Signatures.ContextMenuOpen, out var openPtr, "Context Menu open")) {
                 unsafe {
-                    this.ContextMenuOpenHook = new Hook<ContextMenuOpenDelegate>(openPtr, new ContextMenuOpenDelegate(this.OpenMenuDetour));
+                    this.ContextMenuOpenHook = new Hook<ContextMenuOpenDelegate>(openPtr, this.OpenMenuDetour);
                 }
 
                 this.ContextMenuOpenHook.Enable();
@@ -230,20 +230,20 @@ namespace XivCommon.Functions.ContextMenu {
             }
 
             if (scanner.TryScanText(Signatures.ContextMenuSelected, out var selectedPtr, "Context Menu selected")) {
-                this.ContextMenuItemSelectedHook = new Hook<ContextMenuItemSelectedInternalDelegate>(selectedPtr, new ContextMenuItemSelectedInternalDelegate(this.ItemSelectedDetour));
+                this.ContextMenuItemSelectedHook = new Hook<ContextMenuItemSelectedInternalDelegate>(selectedPtr, this.ItemSelectedDetour);
                 this.ContextMenuItemSelectedHook.Enable();
             }
 
             if (scanner.TryScanText(Signatures.TitleContextMenuOpen, out var titleOpenPtr, "Context Menu (title menu open)")) {
                 unsafe {
-                    this.TitleContextMenuOpenHook = new Hook<ContextMenuOpenDelegate>(titleOpenPtr, new ContextMenuOpenDelegate(this.TitleContextMenuOpenDetour));
+                    this.TitleContextMenuOpenHook = new Hook<ContextMenuOpenDelegate>(titleOpenPtr, this.TitleContextMenuOpenDetour);
                 }
 
                 this.TitleContextMenuOpenHook.Enable();
             }
 
             if (scanner.TryScanText(Signatures.ContextMenuEvent66, out var event66Ptr, "Context Menu (event 66)")) {
-                this.ContextMenuEvent66Hook = new Hook<ContextMenuEvent66Delegate>(event66Ptr, new ContextMenuEvent66Delegate(this.ContextMenuEvent66Detour));
+                this.ContextMenuEvent66Hook = new Hook<ContextMenuEvent66Delegate>(event66Ptr, this.ContextMenuEvent66Detour);
                 this.ContextMenuEvent66Hook.Enable();
             }
 

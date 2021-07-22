@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFrameworks>net472;net48</TargetFrameworks>
+        <TargetFramework>net5-windows</TargetFramework>
         <LangVersion>latest</LangVersion>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <Nullable>enable</Nullable>
-        <Version>2.3.0</Version>
+        <Version>3.0.0-alpha.1</Version>
         <DebugType>full</DebugType>
     </PropertyGroup>
 

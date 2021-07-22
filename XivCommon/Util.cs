@@ -7,7 +7,7 @@ namespace XivCommon {
         internal static byte[] Terminate(this byte[] array) {
             var terminated = new byte[array.Length + 1];
             Array.Copy(array, terminated, array.Length);
-            terminated[terminated.Length - 1] = 0;
+            terminated[^1] = 0;
 
             return terminated;
         }

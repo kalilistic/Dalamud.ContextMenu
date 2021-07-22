@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using Dalamud.Plugin;
 using XivCommon.Functions;
@@ -95,16 +94,13 @@ namespace XivCommon {
             var scanner = @interface.TargetModuleScanner;
             var seStringManager = @interface.SeStringManager;
 
-            var dalamudField = @interface.GetType().GetField("dalamud", BindingFlags.Instance | BindingFlags.NonPublic);
-            var dalamud = (Dalamud.Dalamud) dalamudField!.GetValue(@interface);
-
             this.UiAlloc = new UiAlloc(scanner);
             this.Chat = new Chat(this, scanner);
             this.PartyFinder = new PartyFinder(scanner, @interface.Framework.Gui.PartyFinder, hooks);
             this.BattleTalk = new BattleTalk(this, scanner, seStringManager, hooks.HasFlag(Hooks.BattleTalk));
             this.Examine = new Examine(this, scanner);
             this.Talk = new Talk(scanner, seStringManager, hooks.HasFlag(Hooks.Talk));
-            this.ChatBubbles = new ChatBubbles(dalamud, scanner, seStringManager, hooks.HasFlag(Hooks.ChatBubbles));
+            this.ChatBubbles = new ChatBubbles(@interface.ClientState, scanner, seStringManager, hooks.HasFlag(Hooks.ChatBubbles));
             this.ContextMenu = new ContextMenu(this, scanner, seStringManager, @interface.ClientState.ClientLanguage, hooks);
             this.Tooltips = new Tooltips(scanner, @interface.Framework, @interface.Framework.Gui, seStringManager, hooks.HasFlag(Hooks.Tooltips));
             this.NamePlates = new NamePlates(this, scanner, seStringManager, hooks.HasFlag(Hooks.NamePlates));

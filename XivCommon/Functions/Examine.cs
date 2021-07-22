@@ -41,7 +41,7 @@ namespace XivCommon.Functions {
         /// </summary>
         /// <param name="actorId">Actor ID to open window for</param>
         /// <exception cref="InvalidOperationException">If the signature for this function could not be found</exception>
-        public void OpenExamineWindow(int actorId) {
+        public void OpenExamineWindow(uint actorId) {
             if (this.RequestCharacterInfo == null) {
                 throw new InvalidOperationException("Could not find signature for Examine function");
             }
@@ -57,11 +57,11 @@ namespace XivCommon.Functions {
             unsafe {
                 // offsets at sig E8 ?? ?? ?? ?? 33 C0 EB 4C
                 // this is called at the end of the 2c case
-                var raw = (int*) rciData;
+                var raw = (uint*) rciData;
                 *(raw + 10) = actorId;
                 *(raw + 11) = actorId;
                 *(raw + 12) = actorId;
-                *(raw + 13) = -536870912;
+                *(raw + 13) = 0xE0000000;
                 *(raw + 311) = 0;
             }
 

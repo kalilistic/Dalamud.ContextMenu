@@ -56,7 +56,7 @@ namespace XivCommon.Functions.NamePlates {
 
             if (scanner.TryScanText(Signatures.NamePlateUpdate, out var updatePtr)) {
                 unsafe {
-                    this._namePlateUpdateHook = new Hook<NamePlateUpdateDelegate>(updatePtr, new NamePlateUpdateDelegate(this.NamePlateUpdateDetour));
+                    this._namePlateUpdateHook = new Hook<NamePlateUpdateDelegate>(updatePtr, this.NamePlateUpdateDetour);
                 }
 
                 this._namePlateUpdateHook.Enable();
@@ -209,7 +209,7 @@ namespace XivCommon.Functions.NamePlates {
                     numbers->SetValue(numbersIndex + IconIndex, (int) args.Icon);
                 }
 
-                var colour = args.Colour;
+                var colour = (ByteColor) args.Colour;
                 var colourInt = *(int*) &colour;
                 if (colourInt != numbers->IntArray[numbersIndex + ColourIndex]) {
                     numbers->SetValue(numbersIndex + ColourIndex, colourInt);

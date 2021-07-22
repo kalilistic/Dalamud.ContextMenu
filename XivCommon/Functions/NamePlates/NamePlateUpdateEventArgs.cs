@@ -1,6 +1,5 @@
 ﻿using System;
 using Dalamud.Game.Text.SeStringHandling;
-using FFXIVClientStructs.FFXIV.Client.Graphics;
 
 namespace XivCommon.Functions.NamePlates {
     /// <summary>
@@ -55,7 +54,7 @@ namespace XivCommon.Functions.NamePlates {
         /// <summary>
         /// The colour of this name plate.
         /// </summary>
-        public ByteColor Colour { get; set; }
+        public RgbaColour Colour { get; set; } = new();
 
         /// <summary>
         /// <para>

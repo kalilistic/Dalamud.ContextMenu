@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using FFXIVClientStructs.FFXIV.Client.Graphics;
 
 namespace XivCommon.Functions.NamePlates {
     [StructLayout(LayoutKind.Explicit, Size = 0x28)]
@@ -89,5 +90,87 @@ namespace XivCommon.Functions.NamePlates {
         /// A name plate where the title always appears below the name and the FC tag is removed
         /// </summary>
         LowTitleNoFc = 8,
+    }
+
+    /// <summary>
+    /// A colour, represented in the RGBA format.
+    /// </summary>
+    public class RgbaColour {
+        /// <summary>
+        /// The red component of the colour.
+        /// </summary>
+        public byte R { get; set; }
+
+        /// <summary>
+        /// The green component of the colour.
+        /// </summary>
+        public byte G { get; set; }
+
+        /// <summary>
+        /// The blue component of the colour.
+        /// </summary>
+        public byte B { get; set; }
+
+        /// <summary>
+        /// The alpha component of the colour.
+        /// </summary>
+        public byte A { get; set; } = byte.MaxValue;
+
+        /// <summary>
+        /// Converts an unsigned integer into an RgbaColour.
+        /// </summary>
+        /// <param name="rgba">32-bit integer representing an RGBA colour</param>
+        /// <returns>an RgbaColour equivalent to the integer representation</returns>
+        public static implicit operator RgbaColour(uint rgba) {
+            var r = (byte) ((rgba >> 24) & 0xFF);
+            var g = (byte) ((rgba >> 16) & 0xFF);
+            var b = (byte) ((rgba >> 8) & 0xFF);
+            var a = (byte) (rgba & 0xFF);
+
+            return new RgbaColour {
+                R = r,
+                G = g,
+                B = b,
+                A = a,
+            };
+        }
+
+        /// <summary>
+        /// Converts an RgbaColour into an unsigned integer representation.
+        /// </summary>
+        /// <param name="rgba">an RgbaColour to convert</param>
+        /// <returns>32-bit integer representing an RGBA colour</returns>
+        public static implicit operator uint(RgbaColour rgba) {
+            return (uint) ((rgba.R << 24)
+                           | (rgba.G << 16)
+                           | (rgba.B << 8)
+                           | rgba.A);
+        }
+
+        /// <summary>
+        /// Converts a ByteColor into an RgbaColour.
+        /// </summary>
+        /// <param name="rgba">ByteColor</param>
+        /// <returns>equivalent RgbaColour</returns>
+        public static implicit operator RgbaColour(ByteColor rgba) {
+            return (uint) ((rgba.R << 24)
+                           | (rgba.G << 16)
+                           | (rgba.B << 8)
+                           | rgba.A);
+        }
+
+        /// <summary>
+        /// Converts an RgbaColour into a ByteColor.
+        /// </summary>
+        /// <param name="rgba">RgbaColour</param>
+        /// <returns>equivalent ByteColour</returns>
+        public static implicit operator ByteColor(RgbaColour rgba) {
+            return new() {
+                R = rgba.R,
+                G = rgba.G,
+                B = rgba.B,
+                A = rgba.A,
+            };
+        }
     }
 }

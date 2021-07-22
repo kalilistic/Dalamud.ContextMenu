@@ -84,7 +84,7 @@ namespace XivCommon.Functions.Tooltips {
 
             if (scanner.TryScanText(Signatures.AgentItemDetailUpdateTooltip, out var updateItemPtr, "Tooltips - Items")) {
                 unsafe {
-                    this.ItemUpdateTooltipHook = new Hook<ItemUpdateTooltipDelegate>(updateItemPtr, new ItemUpdateTooltipDelegate(this.ItemUpdateTooltipDetour));
+                    this.ItemUpdateTooltipHook = new Hook<ItemUpdateTooltipDelegate>(updateItemPtr, this.ItemUpdateTooltipDetour);
                 }
 
                 this.ItemUpdateTooltipHook.Enable();
@@ -92,7 +92,7 @@ namespace XivCommon.Functions.Tooltips {
 
             if (scanner.TryScanText(Signatures.AgentActionDetailUpdateTooltip, out var updateActionPtr, "Tooltips - Actions")) {
                 unsafe {
-                    this.ActionGenerateTooltipHook = new Hook<ActionUpdateTooltipDelegate>(updateActionPtr, new ActionUpdateTooltipDelegate(this.ActionUpdateTooltipDetour));
+                    this.ActionGenerateTooltipHook = new Hook<ActionUpdateTooltipDelegate>(updateActionPtr, this.ActionUpdateTooltipDetour);
                 }
 
                 this.ActionGenerateTooltipHook.Enable();

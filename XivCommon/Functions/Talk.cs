@@ -3,7 +3,6 @@ using System.Runtime.InteropServices;
 using Dalamud.Game;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Hooking;
-using Dalamud.Plugin;
 
 namespace XivCommon.Functions {
     /// <summary>
@@ -59,7 +58,7 @@ namespace XivCommon.Functions {
             }
 
             if (scanner.TryScanText(Signatures.ShowMessageBox, out var showMessageBoxPtr, "Talk")) {
-                this.AddonTalkV45Hook = new Hook<AddonTalkV45Delegate>(showMessageBoxPtr, new AddonTalkV45Delegate(this.AddonTalkV45Detour));
+                this.AddonTalkV45Hook = new Hook<AddonTalkV45Delegate>(showMessageBoxPtr, this.AddonTalkV45Detour);
                 this.AddonTalkV45Hook.Enable();
             }
         }

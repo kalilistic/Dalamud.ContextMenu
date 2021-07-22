@@ -3,7 +3,6 @@ using System.Runtime.InteropServices;
 using Dalamud.Game;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Hooking;
-using Dalamud.Plugin;
 
 namespace XivCommon.Functions {
     /// <summary>
@@ -47,7 +46,7 @@ namespace XivCommon.Functions {
                 this.AddBattleTalk = Marshal.GetDelegateForFunctionPointer<AddBattleTalkDelegate>(addBattleTalkPtr);
 
                 if (this.HookEnabled) {
-                    this.AddBattleTalkHook = new Hook<AddBattleTalkDelegate>(addBattleTalkPtr, new AddBattleTalkDelegate(this.AddBattleTalkDetour));
+                    this.AddBattleTalkHook = new Hook<AddBattleTalkDelegate>(addBattleTalkPtr, this.AddBattleTalkDetour);
                     this.AddBattleTalkHook.Enable();
                 }
             }
