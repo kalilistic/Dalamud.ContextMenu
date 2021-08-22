@@ -65,7 +65,7 @@ namespace XivCommon.Functions.ContextMenu {
         /// </summary>
         private const int InventoryMenuActionsOffset = 0x558;
 
-        private const int ActorIdOffset = 0xEF0;
+        private const int ObjectIdOffset = 0xEF0;
         private const int ContentIdLowerOffset = 0xEE0;
         private const int TextPointerOffset = 0xE08;
         private const int WorldOffset = 0xF00;
@@ -317,13 +317,13 @@ namespace XivCommon.Functions.ContextMenu {
             return this._getAddonByInternalId((IntPtr) stage->RaptureAtkUnitManager, addonId);
         }
 
-        private unsafe (uint actorId, uint contentIdLower, SeString? text, ushort actorWorld) GetAgentInfo(IntPtr agent) {
-            var actorId = *(uint*) (agent + ActorIdOffset);
+        private unsafe (uint objectId, uint contentIdLower, SeString? text, ushort objectWorld) GetAgentInfo(IntPtr agent) {
+            var objectId = *(uint*) (agent + ObjectIdOffset);
             var contentIdLower = *(uint*) (agent + ContentIdLowerOffset);
             var textBytes = Util.ReadTerminated(Marshal.ReadIntPtr(agent + TextPointerOffset));
             var text = textBytes.Length == 0 ? null : this.SeStringManager.Parse(textBytes);
-            var actorWorld = *(ushort*) (agent + WorldOffset);
-            return (actorId, contentIdLower, text, actorWorld);
+            var objectWorld = *(ushort*) (agent + WorldOffset);
+            return (objectId, contentIdLower, text, objectWorld);
         }
 
         private static unsafe (uint itemId, uint itemAmount, bool itemHq) GetInventoryAgentInfo(IntPtr agent) {
@@ -531,10 +531,10 @@ namespace XivCommon.Functions.ContextMenu {
                     addon,
                     agent,
                     parentAddonName,
-                    info.actorId,
+                    info.objectId,
                     info.contentIdLower,
                     info.text,
-                    info.actorWorld
+                    info.objectWorld
                 );
                 if (nativeItems != null) {
                     args.Items.AddRange(nativeItems);
@@ -636,10 +636,10 @@ namespace XivCommon.Functions.ContextMenu {
                         addon,
                         custom.Agent,
                         addonName,
-                        info.actorId,
+                        info.objectId,
                         info.contentIdLower,
                         info.text,
-                        info.actorWorld
+                        info.objectWorld
                     );
 
                     try {

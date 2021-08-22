@@ -1,5 +1,5 @@
 ﻿using System;
-using Dalamud.Plugin;
+using Dalamud.Logging;
 
 namespace XivCommon {
     internal static class Logger {

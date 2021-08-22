@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using Dalamud.Game;
-using Dalamud.Game.Internal;
-using Dalamud.Game.Internal.Gui;
+using Dalamud.Game.Gui;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Hooking;
 
@@ -61,14 +60,12 @@ namespace XivCommon.Functions.Tooltips {
         /// </summary>
         public event ActionTooltipEventDelegate? OnActionTooltip;
 
-        private Framework Framework { get; }
         private GameGui GameGui { get; }
         private SeStringManager SeStringManager { get; }
         private ItemTooltip? ItemTooltip { get; set; }
         private ActionTooltip? ActionTooltip { get; set; }
 
-        internal Tooltips(SigScanner scanner, Framework framework, GameGui gui, SeStringManager manager, bool enabled) {
-            this.Framework = framework;
+        internal Tooltips(SigScanner scanner, GameGui gui, SeStringManager manager, bool enabled) {
             this.GameGui = gui;
             this.SeStringManager = manager;
 

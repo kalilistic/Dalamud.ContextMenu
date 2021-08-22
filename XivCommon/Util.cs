@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Dalamud.Game.Text.SeStringHandling;
 
 namespace XivCommon {
@@ -14,7 +15,7 @@ namespace XivCommon {
 
         internal static unsafe byte[] ReadTerminated(IntPtr memory) {
             if (memory == IntPtr.Zero) {
-                return new byte[0];
+                return Array.Empty<byte>();
             }
 
             var buf = new List<byte>();
@@ -35,6 +36,12 @@ namespace XivCommon {
 
         internal static void PrintMissingSig(string name) {
             Logger.LogWarning($"Could not find signature for {name}. This functionality will be disabled.");
+        }
+
+        internal static T GetService<T>() {
+            var service = Type.GetType("Dalamud.Service")!.MakeGenericType(typeof(T));
+            var get = service.GetMethod("Get", BindingFlags.Public | BindingFlags.Static)!;
+            return (T) get.Invoke(null, null)!;
         }
     }
 }

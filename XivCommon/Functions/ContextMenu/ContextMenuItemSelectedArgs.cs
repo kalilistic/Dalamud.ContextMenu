@@ -6,7 +6,7 @@ namespace XivCommon.Functions.ContextMenu {
     /// Arguments for the context menu item selected delegate.
     /// </summary>
     public class ContextMenuItemSelectedArgs : BaseContextMenuArgs {
-        internal ContextMenuItemSelectedArgs(IntPtr addon, IntPtr agent, string? parentAddonName, uint actorId, uint contentIdLower, SeString? text, ushort actorWorld) : base(addon, agent, parentAddonName, actorId, contentIdLower, text, actorWorld) {
+        internal ContextMenuItemSelectedArgs(IntPtr addon, IntPtr agent, string? parentAddonName, uint objectId, uint contentIdLower, SeString? text, ushort objectWorld) : base(addon, agent, parentAddonName, objectId, contentIdLower, text, objectWorld) {
         }
     }
 }

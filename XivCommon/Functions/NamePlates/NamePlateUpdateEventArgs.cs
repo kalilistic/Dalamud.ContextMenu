@@ -7,9 +7,9 @@ namespace XivCommon.Functions.NamePlates {
     /// </summary>
     public class NamePlateUpdateEventArgs {
         /// <summary>
-        /// The actor ID associated with this name plate.
+        /// The object ID associated with this name plate.
         /// </summary>
-        public uint ActorId { get; }
+        public uint ObjectId { get; }
 
         /// <summary>
         /// The name string.
@@ -71,8 +71,8 @@ namespace XivCommon.Functions.NamePlates {
         /// </summary>
         public int Flags { get; set; }
 
-        internal NamePlateUpdateEventArgs(uint actorId) {
-            this.ActorId = actorId;
+        internal NamePlateUpdateEventArgs(uint objectId) {
+            this.ObjectId = objectId;
         }
     }
 }

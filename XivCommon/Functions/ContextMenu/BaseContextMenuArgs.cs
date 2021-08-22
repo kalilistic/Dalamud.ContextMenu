@@ -22,33 +22,33 @@ namespace XivCommon.Functions.ContextMenu {
         public string? ParentAddonName { get; }
 
         /// <summary>
-        /// The actor ID for this context menu. May be invalid (0xE0000000).
+        /// The object ID for this context menu. May be invalid (0xE0000000).
         /// </summary>
-        public uint ActorId { get; }
+        public uint ObjectId { get; }
 
         /// <summary>
-        /// The lower half of the content ID of the actor for this context menu. May be zero.
+        /// The lower half of the content ID of the object for this context menu. May be zero.
         /// </summary>
         public uint ContentIdLower { get; }
 
         /// <summary>
-        /// The text related to this context menu, usually an actor name.
+        /// The text related to this context menu, usually an object name.
         /// </summary>
         public SeString? Text { get; }
 
         /// <summary>
-        /// The world of the actor this context menu is for, if any.
+        /// The world of the object this context menu is for, if any.
         /// </summary>
-        public ushort ActorWorld { get; }
+        public ushort ObjectWorld { get; }
 
-        internal BaseContextMenuArgs(IntPtr addon, IntPtr agent, string? parentAddonName, uint actorId, uint contentIdLower, SeString? text, ushort actorWorld) {
+        internal BaseContextMenuArgs(IntPtr addon, IntPtr agent, string? parentAddonName, uint objectId, uint contentIdLower, SeString? text, ushort objectWorld) {
             this.Addon = addon;
             this.Agent = agent;
             this.ParentAddonName = parentAddonName;
-            this.ActorId = actorId;
+            this.ObjectId = objectId;
             this.ContentIdLower = contentIdLower;
             this.Text = text;
-            this.ActorWorld = actorWorld;
+            this.ObjectWorld = objectWorld;
         }
     }
 }

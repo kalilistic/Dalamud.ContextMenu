@@ -1,7 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using Dalamud.Plugin;
+using Dalamud.Game;
+using Dalamud.Game.ClientState;
+using Dalamud.Game.ClientState.Objects;
+using Dalamud.Game.Gui;
+using Dalamud.Game.Gui.PartyFinder;
+using Dalamud.Game.Text.SeStringHandling;
 using XivCommon.Functions;
 using XivCommon.Functions.ContextMenu;
 using XivCommon.Functions.NamePlates;
@@ -25,7 +30,7 @@ namespace XivCommon {
 
         private delegate IntPtr GetAgentByInternalIdDelegate(IntPtr agentModule, uint id);
 
-        private DalamudPluginInterface Interface { get; }
+        private GameGui GameGui { get; }
 
         private GetAgentByInternalIdDelegate? GetAgentByInternalIdInternal { get; }
 
@@ -88,21 +93,24 @@ namespace XivCommon {
         /// </summary>
         public Journal Journal { get; }
 
-        internal GameFunctions(Hooks hooks, DalamudPluginInterface @interface) {
-            this.Interface = @interface;
+        internal GameFunctions(Hooks hooks) {
+            this.GameGui = Util.GetService<GameGui>();
 
-            var scanner = @interface.TargetModuleScanner;
-            var seStringManager = @interface.SeStringManager;
+            var clientState = Util.GetService<ClientState>();
+            var objectTable = Util.GetService<ObjectTable>();
+            var partyFinderGui = Util.GetService<PartyFinderGui>();
+            var scanner = Util.GetService<SigScanner>();
+            var seStringManager = Util.GetService<SeStringManager>();
 
             this.UiAlloc = new UiAlloc(scanner);
             this.Chat = new Chat(this, scanner);
-            this.PartyFinder = new PartyFinder(scanner, @interface.Framework.Gui.PartyFinder, hooks);
+            this.PartyFinder = new PartyFinder(scanner, partyFinderGui, hooks);
             this.BattleTalk = new BattleTalk(this, scanner, seStringManager, hooks.HasFlag(Hooks.BattleTalk));
             this.Examine = new Examine(this, scanner);
             this.Talk = new Talk(scanner, seStringManager, hooks.HasFlag(Hooks.Talk));
-            this.ChatBubbles = new ChatBubbles(@interface.ClientState, scanner, seStringManager, hooks.HasFlag(Hooks.ChatBubbles));
-            this.ContextMenu = new ContextMenu(this, scanner, seStringManager, @interface.ClientState.ClientLanguage, hooks);
-            this.Tooltips = new Tooltips(scanner, @interface.Framework, @interface.Framework.Gui, seStringManager, hooks.HasFlag(Hooks.Tooltips));
+            this.ChatBubbles = new ChatBubbles(objectTable, scanner, seStringManager, hooks.HasFlag(Hooks.ChatBubbles));
+            this.ContextMenu = new ContextMenu(this, scanner, seStringManager, clientState.ClientLanguage, hooks);
+            this.Tooltips = new Tooltips(scanner, this.GameGui, seStringManager, hooks.HasFlag(Hooks.Tooltips));
             this.NamePlates = new NamePlates(this, scanner, seStringManager, hooks.HasFlag(Hooks.NamePlates));
             this.DutyFinder = new DutyFinder(this, scanner);
             this.Journal = new Journal(this, scanner);
@@ -132,7 +140,7 @@ namespace XivCommon {
         /// </summary>
         /// <returns>Pointer</returns>
         public IntPtr GetUiModule() {
-            return this.Interface.Framework.Gui.GetUIModule();
+            return this.GameGui.GetUIModule();
         }
 
         /// <summary>

@@ -19,10 +19,9 @@ namespace XivCommon {
         /// This will automatically enable hooks based on the hooks parameter.
         /// </para>
         /// </summary>
-        /// <param name="interface">The <see cref="DalamudPluginInterface"/> of the plugin constructing this base</param>
         /// <param name="hooks">Flags indicating which hooks to enable</param>
-        public XivCommonBase(DalamudPluginInterface @interface, Hooks hooks = HooksExt.DefaultHooks) {
-            this.Functions = new GameFunctions(hooks, @interface);
+        public XivCommonBase(Hooks hooks = HooksExt.DefaultHooks) {
+            this.Functions = new GameFunctions(hooks);
         }
 
         /// <inheritdoc />

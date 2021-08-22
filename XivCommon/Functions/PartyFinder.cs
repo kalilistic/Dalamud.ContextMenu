@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Dalamud.Game;
-using Dalamud.Game.Internal.Gui;
-using Dalamud.Game.Internal.Gui.Structs;
+using Dalamud.Game.Gui.PartyFinder;
+using Dalamud.Game.Gui.PartyFinder.Types;
 using Dalamud.Hooking;
 
 namespace XivCommon.Functions {

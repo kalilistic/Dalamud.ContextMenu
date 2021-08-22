@@ -12,7 +12,7 @@ namespace XivCommon.Functions.ContextMenu {
         /// </summary>
         public List<BaseContextMenuItem> Items { get; } = new();
 
-        internal ContextMenuOpenArgs(IntPtr addon, IntPtr agent, string? parentAddonName, uint actorId, uint contentIdLower, SeString? text, ushort actorWorld) : base(addon, agent, parentAddonName, actorId, contentIdLower, text, actorWorld) {
+        internal ContextMenuOpenArgs(IntPtr addon, IntPtr agent, string? parentAddonName, uint objectId, uint contentIdLower, SeString? text, ushort objectWorld) : base(addon, agent, parentAddonName, objectId, contentIdLower, text, objectWorld) {
         }
     }
 }

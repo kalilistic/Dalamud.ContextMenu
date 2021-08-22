@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using Dalamud.Game;
-using Dalamud.Game.ClientState;
-using Dalamud.Game.ClientState.Actors.Types;
+using Dalamud.Game.ClientState.Objects;
+using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Hooking;
 
@@ -16,12 +16,12 @@ namespace XivCommon.Functions {
             internal const string ChatBubbleUpdate = "48 85 D2 0F 84 ?? ?? ?? ?? 48 89 5C 24 ?? 57 48 83 EC 20 8B 41 0C";
         }
 
-        private ClientState ClientState { get; }
+        private ObjectTable ObjectTable { get; }
         private SeStringManager SeStringManager { get; }
 
-        private delegate void OpenChatBubbleDelegate(IntPtr manager, IntPtr actor, IntPtr text, byte a4);
+        private delegate void OpenChatBubbleDelegate(IntPtr manager, IntPtr @object, IntPtr text, byte a4);
 
-        private delegate void UpdateChatBubbleDelegate(IntPtr bubblePtr, IntPtr actor);
+        private delegate void UpdateChatBubbleDelegate(IntPtr bubblePtr, IntPtr @object);
 
         private Hook<OpenChatBubbleDelegate>? OpenChatBubbleHook { get; }
 
@@ -30,12 +30,12 @@ namespace XivCommon.Functions {
         /// <summary>
         /// The delegate for chat bubble events.
         /// </summary>
-        public delegate void OnChatBubbleDelegate(ref Actor actor, ref SeString text);
+        public delegate void OnChatBubbleDelegate(ref GameObject @object, ref SeString text);
 
         /// <summary>
         /// The delegate for chat bubble update events.
         /// </summary>
-        public delegate void OnUpdateChatBubbleDelegate(ref Actor actor);
+        public delegate void OnUpdateChatBubbleDelegate(ref GameObject @object);
 
         /// <summary>
         /// <para>
@@ -57,8 +57,8 @@ namespace XivCommon.Functions {
         /// </summary>
         public event OnUpdateChatBubbleDelegate? OnUpdateBubble;
 
-        internal ChatBubbles(ClientState clientState, SigScanner scanner, SeStringManager manager, bool hookEnabled) {
-            this.ClientState = clientState;
+        internal ChatBubbles(ObjectTable objectTable, SigScanner scanner, SeStringManager manager, bool hookEnabled) {
+            this.ObjectTable = objectTable;
             this.SeStringManager = manager;
 
             if (!hookEnabled) {
@@ -82,22 +82,22 @@ namespace XivCommon.Functions {
             this.UpdateChatBubbleHook?.Dispose();
         }
 
-        private void OpenChatBubbleDetour(IntPtr manager, IntPtr actor, IntPtr text, byte a4) {
+        private void OpenChatBubbleDetour(IntPtr manager, IntPtr @object, IntPtr text, byte a4) {
             try {
-                this.OpenChatBubbleDetourInner(manager, actor, text, a4);
+                this.OpenChatBubbleDetourInner(manager, @object, text, a4);
             } catch (Exception ex) {
                 Logger.LogError(ex, "Exception in chat bubble detour");
-                this.OpenChatBubbleHook!.Original(manager, actor, text, a4);
+                this.OpenChatBubbleHook!.Original(manager, @object, text, a4);
             }
         }
 
-        private void OpenChatBubbleDetourInner(IntPtr manager, IntPtr actorPtr, IntPtr textPtr, byte a4) {
-            var actor = this.ClientState.Actors.CreateActorReference(actorPtr);
+        private void OpenChatBubbleDetourInner(IntPtr manager, IntPtr @objectPtr, IntPtr textPtr, byte a4) {
+            var @object = this.ObjectTable.CreateObjectReference(objectPtr);
 
             var text = Util.ReadSeString(textPtr, this.SeStringManager);
 
             try {
-                this.OnChatBubble?.Invoke(ref actor, ref text);
+                this.OnChatBubble?.Invoke(ref @object, ref text);
             } catch (Exception ex) {
                 Logger.LogError(ex, "Exception in chat bubble event");
             }
@@ -106,31 +106,31 @@ namespace XivCommon.Functions {
 
             unsafe {
                 fixed (byte* newTextPtr = newText) {
-                    this.OpenChatBubbleHook!.Original(manager, actor.Address, (IntPtr) newTextPtr, a4);
+                    this.OpenChatBubbleHook!.Original(manager, @object.Address, (IntPtr) newTextPtr, a4);
                 }
             }
         }
 
-        private void UpdateChatBubbleDetour(IntPtr bubblePtr, IntPtr actor) {
+        private void UpdateChatBubbleDetour(IntPtr bubblePtr, IntPtr @object) {
             try {
-                this.UpdateChatBubbleDetourInner(bubblePtr, actor);
+                this.UpdateChatBubbleDetourInner(bubblePtr, @object);
             } catch (Exception ex) {
                 Logger.LogError(ex, "Exception in update chat bubble detour");
-                this.UpdateChatBubbleHook!.Original(bubblePtr, actor);
+                this.UpdateChatBubbleHook!.Original(bubblePtr, @object);
             }
         }
 
-        private void UpdateChatBubbleDetourInner(IntPtr bubblePtr, IntPtr actorPtr) {
+        private void UpdateChatBubbleDetourInner(IntPtr bubblePtr, IntPtr objectPtr) {
             // var bubble = (ChatBubble*) bubblePtr;
-            var actor = this.ClientState.Actors.CreateActorReference(actorPtr);
+            var @object = this.ObjectTable.CreateObjectReference(objectPtr);
 
             try {
-                this.OnUpdateBubble?.Invoke(ref actor);
+                this.OnUpdateBubble?.Invoke(ref @object);
             } catch (Exception ex) {
                 Logger.LogError(ex, "Exception in chat bubble update event");
             }
 
-            this.UpdateChatBubbleHook!.Original(bubblePtr, actor.Address);
+            this.UpdateChatBubbleHook!.Original(bubblePtr, @object.Address);
         }
     }
 

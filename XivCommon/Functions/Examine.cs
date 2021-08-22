@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using Dalamud.Game;
-using Dalamud.Game.ClientState.Actors.Types;
+using Dalamud.Game.ClientState.Objects.Types;
 
 namespace XivCommon.Functions {
     /// <summary>
@@ -28,20 +28,20 @@ namespace XivCommon.Functions {
         }
 
         /// <summary>
-        /// Opens the Examine window for the specified actor.
+        /// Opens the Examine window for the specified object.
         /// </summary>
-        /// <param name="actor">Actor to open window for</param>
+        /// <param name="object">Object to open window for</param>
         /// <exception cref="InvalidOperationException">If the signature for this function could not be found</exception>
-        public void OpenExamineWindow(Actor actor) {
-            this.OpenExamineWindow(actor.ActorId);
+        public void OpenExamineWindow(GameObject @object) {
+            this.OpenExamineWindow(@object.ObjectId);
         }
 
         /// <summary>
-        /// Opens the Examine window for the actor with the specified ID.
+        /// Opens the Examine window for the object with the specified ID.
         /// </summary>
-        /// <param name="actorId">Actor ID to open window for</param>
+        /// <param name="objectId">Object ID to open window for</param>
         /// <exception cref="InvalidOperationException">If the signature for this function could not be found</exception>
-        public void OpenExamineWindow(uint actorId) {
+        public void OpenExamineWindow(uint objectId) {
             if (this.RequestCharacterInfo == null) {
                 throw new InvalidOperationException("Could not find signature for Examine function");
             }
@@ -58,9 +58,9 @@ namespace XivCommon.Functions {
                 // offsets at sig E8 ?? ?? ?? ?? 33 C0 EB 4C
                 // this is called at the end of the 2c case
                 var raw = (uint*) rciData;
-                *(raw + 10) = actorId;
-                *(raw + 11) = actorId;
-                *(raw + 12) = actorId;
+                *(raw + 10) = objectId;
+                *(raw + 11) = objectId;
+                *(raw + 12) = objectId;
                 *(raw + 13) = 0xE0000000;
                 *(raw + 311) = 0;
             }
