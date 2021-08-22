@@ -93,6 +93,9 @@ namespace XivCommon.Functions {
 
         private void OpenChatBubbleDetourInner(IntPtr manager, IntPtr @objectPtr, IntPtr textPtr, byte a4) {
             var @object = this.ObjectTable.CreateObjectReference(objectPtr);
+            if (@object == null) {
+                return;
+            }
 
             var text = Util.ReadSeString(textPtr, this.SeStringManager);
 
@@ -123,6 +126,9 @@ namespace XivCommon.Functions {
         private void UpdateChatBubbleDetourInner(IntPtr bubblePtr, IntPtr objectPtr) {
             // var bubble = (ChatBubble*) bubblePtr;
             var @object = this.ObjectTable.CreateObjectReference(objectPtr);
+            if (@object == null) {
+                return;
+            }
 
             try {
                 this.OnUpdateBubble?.Invoke(ref @object);
