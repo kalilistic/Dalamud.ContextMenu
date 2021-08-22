@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using Dalamud.Game.Text.SeStringHandling;
+using Dalamud.Plugin;
 
 namespace XivCommon {
     internal static class Util {
@@ -39,7 +40,7 @@ namespace XivCommon {
         }
 
         internal static T GetService<T>() {
-            var service = Type.GetType("Dalamud.Service")!.MakeGenericType(typeof(T));
+            var service = typeof(IDalamudPlugin).Assembly.GetType("Dalamud.Service`1")!.MakeGenericType(typeof(T));
             var get = service.GetMethod("Get", BindingFlags.Public | BindingFlags.Static)!;
             return (T) get.Invoke(null, null)!;
         }

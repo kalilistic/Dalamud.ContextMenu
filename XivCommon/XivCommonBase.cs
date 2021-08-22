@@ -1,5 +1,4 @@
 ﻿using System;
-using Dalamud.Plugin;
 
 namespace XivCommon {
     /// <summary>
