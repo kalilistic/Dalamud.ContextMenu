@@ -167,15 +167,13 @@ namespace XivCommon.Functions.ContextMenu {
 
         private GameFunctions Functions { get; }
         private ClientLanguage Language { get; }
-        private SeStringManager SeStringManager { get; }
         private IntPtr Agent { get; set; } = IntPtr.Zero;
         private List<BaseContextMenuItem> Items { get; } = new();
         private int NormalSize { get; set; }
 
-        internal ContextMenu(GameFunctions functions, SigScanner scanner, SeStringManager manager, ClientLanguage language, Hooks hooks) {
+        internal ContextMenu(GameFunctions functions, SigScanner scanner, ClientLanguage language, Hooks hooks) {
             this.Functions = functions;
             this.Language = language;
-            this.SeStringManager = manager;
 
             if (!hooks.HasFlag(Hooks.ContextMenu)) {
                 return;
@@ -321,7 +319,7 @@ namespace XivCommon.Functions.ContextMenu {
             var objectId = *(uint*) (agent + ObjectIdOffset);
             var contentIdLower = *(uint*) (agent + ContentIdLowerOffset);
             var textBytes = Util.ReadTerminated(Marshal.ReadIntPtr(agent + TextPointerOffset));
-            var text = textBytes.Length == 0 ? null : this.SeStringManager.Parse(textBytes);
+            var text = textBytes.Length == 0 ? null : SeString.Parse(textBytes);
             var objectWorld = *(ushort*) (agent + WorldOffset);
             return (objectId, contentIdLower, text, objectWorld);
         }
@@ -408,7 +406,7 @@ namespace XivCommon.Functions.ContextMenu {
             for (var i = 0; i < this.NormalSize; i++) {
                 var atkItem = &atkValueArgs[offset + i];
 
-                var name = Util.ReadSeString((IntPtr) atkItem->String, this.SeStringManager);
+                var name = Util.ReadSeString((IntPtr) atkItem->String);
 
                 var enabled = true;
                 if (hasGameDisabled) {

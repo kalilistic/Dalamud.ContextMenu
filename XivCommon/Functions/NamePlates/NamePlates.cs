@@ -33,7 +33,6 @@ namespace XivCommon.Functions.NamePlates {
         public event NamePlateUpdateEvent? OnUpdate;
 
         private GameFunctions Functions { get; }
-        private SeStringManager SeStringManager { get; }
         private readonly Hook<NamePlateUpdateDelegate>? _namePlateUpdateHook;
 
         /// <summary>
@@ -46,9 +45,8 @@ namespace XivCommon.Functions.NamePlates {
         /// </summary>
         public bool ForceRedraw { get; set; }
 
-        internal NamePlates(GameFunctions functions, SigScanner scanner, SeStringManager manager, bool hookEnabled) {
+        internal NamePlates(GameFunctions functions, SigScanner scanner, bool hookEnabled) {
             this.Functions = functions;
-            this.SeStringManager = manager;
 
             if (!hookEnabled) {
                 return;
@@ -132,19 +130,19 @@ namespace XivCommon.Functions.NamePlates {
                 var flags = numbers->IntArray[numbersIndex + FlagsIndex];
 
                 var nameRaw = strings->StringArray[NameIndex + i];
-                var name = Util.ReadSeString((IntPtr) nameRaw, this.SeStringManager);
+                var name = Util.ReadSeString((IntPtr) nameRaw);
 
                 var titleRaw = strings->StringArray[TitleIndex + i];
-                var title = Util.ReadSeString((IntPtr) titleRaw, this.SeStringManager);
+                var title = Util.ReadSeString((IntPtr) titleRaw);
 
                 var fcRaw = strings->StringArray[FreeCompanyIndex + i];
-                var fc = Util.ReadSeString((IntPtr) fcRaw, this.SeStringManager);
+                var fc = Util.ReadSeString((IntPtr) fcRaw);
 
                 var levelRaw = strings->StringArray[LevelIndex + i];
-                var level = Util.ReadSeString((IntPtr) levelRaw, this.SeStringManager);
+                var level = Util.ReadSeString((IntPtr) levelRaw);
 
                 var letterRaw = strings->StringArray[EnemyLetterIndex + i];
-                var letter = Util.ReadSeString((IntPtr) letterRaw, this.SeStringManager);
+                var letter = Util.ReadSeString((IntPtr) letterRaw);
 
                 var args = new NamePlateUpdateEventArgs((uint) info.ActorID) {
                     Name = new SeString(name.Payloads),

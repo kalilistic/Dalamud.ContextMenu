@@ -17,7 +17,6 @@ namespace XivCommon.Functions {
         }
 
         private ObjectTable ObjectTable { get; }
-        private SeStringManager SeStringManager { get; }
 
         private delegate void OpenChatBubbleDelegate(IntPtr manager, IntPtr @object, IntPtr text, byte a4);
 
@@ -57,9 +56,8 @@ namespace XivCommon.Functions {
         /// </summary>
         public event OnUpdateChatBubbleDelegate? OnUpdateBubble;
 
-        internal ChatBubbles(ObjectTable objectTable, SigScanner scanner, SeStringManager manager, bool hookEnabled) {
+        internal ChatBubbles(ObjectTable objectTable, SigScanner scanner, bool hookEnabled) {
             this.ObjectTable = objectTable;
-            this.SeStringManager = manager;
 
             if (!hookEnabled) {
                 return;
@@ -97,7 +95,7 @@ namespace XivCommon.Functions {
                 return;
             }
 
-            var text = Util.ReadSeString(textPtr, this.SeStringManager);
+            var text = Util.ReadSeString(textPtr);
 
             try {
                 this.OnChatBubble?.Invoke(ref @object, ref text);

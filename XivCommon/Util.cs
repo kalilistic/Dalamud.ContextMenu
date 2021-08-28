@@ -30,9 +30,9 @@ namespace XivCommon {
             return buf.ToArray();
         }
 
-        internal static SeString ReadSeString(IntPtr memory, SeStringManager manager) {
+        internal static SeString ReadSeString(IntPtr memory) {
             var terminated = ReadTerminated(memory);
-            return manager.Parse(terminated);
+            return SeString.Parse(terminated);
         }
 
         internal static void PrintMissingSig(string name) {

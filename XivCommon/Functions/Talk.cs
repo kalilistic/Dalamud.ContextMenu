@@ -19,8 +19,6 @@ namespace XivCommon.Functions {
         private const int NameOffset = 0x10;
         private const int StyleOffset = 0x38;
 
-        private SeStringManager SeStringManager { get; }
-
         private delegate void AddonTalkV45Delegate(IntPtr addon, IntPtr a2, IntPtr data);
 
         private Hook<AddonTalkV45Delegate>? AddonTalkV45Hook { get; }
@@ -44,9 +42,7 @@ namespace XivCommon.Functions {
         /// </summary>
         public event TalkEventDelegate? OnTalk;
 
-        internal Talk(SigScanner scanner, SeStringManager manager, bool hooksEnabled) {
-            this.SeStringManager = manager;
-
+        internal Talk(SigScanner scanner, bool hooksEnabled) {
             if (scanner.TryScanText(Signatures.SetAtkValue, out var setAtkPtr, "Talk - set atk value")) {
                 this.SetAtkValueString = Marshal.GetDelegateForFunctionPointer<SetAtkValueStringDelegate>(setAtkPtr);
             } else {
@@ -88,8 +84,8 @@ namespace XivCommon.Functions {
             var rawText = Util.ReadTerminated(Marshal.ReadIntPtr(data + TextOffset + 8));
             var style = (TalkStyle) Marshal.ReadByte(data + StyleOffset);
 
-            var name = this.SeStringManager.Parse(rawName);
-            var text = this.SeStringManager.Parse(rawText);
+            var name = SeString.Parse(rawName);
+            var text = SeString.Parse(rawText);
 
             try {
                 this.OnTalk?.Invoke(ref name, ref text, ref style);

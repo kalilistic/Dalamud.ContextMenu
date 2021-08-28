@@ -5,7 +5,7 @@ namespace XivCommon.Functions.Tooltips {
     /// The class allowing for item tooltip manipulation
     /// </summary>
     public unsafe class ItemTooltip : BaseTooltip {
-        internal ItemTooltip(SeStringManager manager, Tooltips.StringArrayDataSetStringDelegate sadSetString, byte*** stringArrayData, int** numberArrayData) : base(manager, sadSetString, stringArrayData, numberArrayData) {
+        internal ItemTooltip(Tooltips.StringArrayDataSetStringDelegate sadSetString, byte*** stringArrayData, int** numberArrayData) : base(sadSetString, stringArrayData, numberArrayData) {
         }
 
         /// <summary>

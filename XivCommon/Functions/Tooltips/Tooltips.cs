@@ -2,7 +2,6 @@
 using System.Runtime.InteropServices;
 using Dalamud.Game;
 using Dalamud.Game.Gui;
-using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Hooking;
 
 namespace XivCommon.Functions.Tooltips {
@@ -61,13 +60,11 @@ namespace XivCommon.Functions.Tooltips {
         public event ActionTooltipEventDelegate? OnActionTooltip;
 
         private GameGui GameGui { get; }
-        private SeStringManager SeStringManager { get; }
         private ItemTooltip? ItemTooltip { get; set; }
         private ActionTooltip? ActionTooltip { get; set; }
 
-        internal Tooltips(SigScanner scanner, GameGui gui, SeStringManager manager, bool enabled) {
+        internal Tooltips(SigScanner scanner, GameGui gui, bool enabled) {
             this.GameGui = gui;
-            this.SeStringManager = manager;
 
             if (scanner.TryScanText(Signatures.SadSetString, out var setStringPtr, "Tooltips - StringArrayData::SetString")) {
                 this.SadSetString = Marshal.GetDelegateForFunctionPointer<StringArrayDataSetStringDelegate>(setStringPtr);
@@ -117,7 +114,7 @@ namespace XivCommon.Functions.Tooltips {
         }
 
         private unsafe void ItemUpdateTooltipDetourInner(int** numberArrayData, byte*** stringArrayData) {
-            this.ItemTooltip = new ItemTooltip(this.SeStringManager, this.SadSetString!, stringArrayData, numberArrayData);
+            this.ItemTooltip = new ItemTooltip(this.SadSetString!, stringArrayData, numberArrayData);
 
             try {
                 this.OnItemTooltip?.Invoke(this.ItemTooltip, this.GameGui.HoveredItem);
@@ -142,7 +139,7 @@ namespace XivCommon.Functions.Tooltips {
         }
 
         private unsafe void ActionUpdateTooltipDetourInner(int** numberArrayData, byte*** stringArrayData) {
-            this.ActionTooltip = new ActionTooltip(this.SeStringManager, this.SadSetString!, stringArrayData, numberArrayData);
+            this.ActionTooltip = new ActionTooltip(this.SadSetString!, stringArrayData, numberArrayData);
 
             try {
                 this.OnActionTooltip?.Invoke(this.ActionTooltip, this.GameGui.HoveredAction);

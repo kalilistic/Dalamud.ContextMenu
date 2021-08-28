@@ -14,7 +14,6 @@ namespace XivCommon.Functions {
         }
 
         private GameFunctions Functions { get; }
-        private SeStringManager SeStringManager { get; }
         private bool HookEnabled { get; }
 
         /// <summary>
@@ -37,9 +36,8 @@ namespace XivCommon.Functions {
         private AddBattleTalkDelegate? AddBattleTalk { get; }
         private Hook<AddBattleTalkDelegate>? AddBattleTalkHook { get; }
 
-        internal BattleTalk(GameFunctions functions, SigScanner scanner, SeStringManager seStringManager, bool hook) {
+        internal BattleTalk(GameFunctions functions, SigScanner scanner,bool hook) {
             this.Functions = functions;
-            this.SeStringManager = seStringManager;
             this.HookEnabled = hook;
 
             if (scanner.TryScanText(Signatures.AddBattleTalk, out var addBattleTalkPtr, "battle talk")) {
@@ -76,8 +74,8 @@ namespace XivCommon.Functions {
             var rawSender = Util.ReadTerminated(senderPtr);
             var rawMessage = Util.ReadTerminated(messagePtr);
 
-            var sender = this.SeStringManager.Parse(rawSender);
-            var message = this.SeStringManager.Parse(rawMessage);
+            var sender = SeString.Parse(rawSender);
+            var message = SeString.Parse(rawMessage);
 
             var options = new BattleTalkOptions {
                 Duration = duration,

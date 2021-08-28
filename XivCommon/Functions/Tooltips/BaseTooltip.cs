@@ -6,7 +6,6 @@ namespace XivCommon.Functions.Tooltips {
     /// The base class for tooltips
     /// </summary>
     public abstract unsafe class BaseTooltip {
-        private SeStringManager Manager { get; }
         private Tooltips.StringArrayDataSetStringDelegate SadSetString { get; }
 
         /// <summary>
@@ -19,8 +18,7 @@ namespace XivCommon.Functions.Tooltips {
         /// </summary>
         protected readonly int** NumberArrayData;
 
-        internal BaseTooltip(SeStringManager manager, Tooltips.StringArrayDataSetStringDelegate sadSetString, byte*** stringArrayData, int** numberArrayData) {
-            this.Manager = manager;
+        internal BaseTooltip(Tooltips.StringArrayDataSetStringDelegate sadSetString, byte*** stringArrayData, int** numberArrayData) {
             this.SadSetString = sadSetString;
             this._stringArrayData = stringArrayData;
             this.NumberArrayData = numberArrayData;
@@ -38,7 +36,7 @@ namespace XivCommon.Functions.Tooltips {
         protected SeString this[int index] {
             get {
                 var ptr = *(this._stringArrayData + 4) + index;
-                return Util.ReadSeString((IntPtr) (*ptr), this.Manager);
+                return Util.ReadSeString((IntPtr) (*ptr));
             }
             set {
                 var encoded = value.Encode().Terminate();
