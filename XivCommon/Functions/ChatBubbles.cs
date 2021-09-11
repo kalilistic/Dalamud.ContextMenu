@@ -89,7 +89,7 @@ namespace XivCommon.Functions {
             }
         }
 
-        private void OpenChatBubbleDetourInner(IntPtr manager, IntPtr @objectPtr, IntPtr textPtr, byte a4) {
+        private void OpenChatBubbleDetourInner(IntPtr manager, IntPtr objectPtr, IntPtr textPtr, byte a4) {
             var @object = this.ObjectTable.CreateObjectReference(objectPtr);
             if (@object == null) {
                 return;
