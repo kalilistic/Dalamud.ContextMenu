@@ -144,7 +144,7 @@ namespace XivCommon.Functions.NamePlates {
                 var letterRaw = strings->StringArray[EnemyLetterIndex + i];
                 var letter = Util.ReadSeString((IntPtr) letterRaw);
 
-                var args = new NamePlateUpdateEventArgs((uint) info.ActorID) {
+                var args = new NamePlateUpdateEventArgs(info.ObjectID.ObjectID) {
                     Name = new SeString(name.Payloads),
                     FreeCompany = new SeString(fc.Payloads),
                     Title = new SeString(title.Payloads),
