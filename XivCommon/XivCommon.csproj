@@ -5,7 +5,7 @@
         <LangVersion>latest</LangVersion>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <Nullable>enable</Nullable>
-        <Version>3.0.2</Version>
+        <Version>3.1.0</Version>
         <DebugType>full</DebugType>
     </PropertyGroup>
 
