@@ -8,6 +8,7 @@ using Dalamud.Game.Gui;
 using Dalamud.Game.Gui.PartyFinder;
 using XivCommon.Functions;
 using XivCommon.Functions.ContextMenu;
+using XivCommon.Functions.FriendList;
 using XivCommon.Functions.NamePlates;
 using XivCommon.Functions.Tooltips;
 
@@ -88,6 +89,11 @@ namespace XivCommon {
         public DutyFinder DutyFinder { get; }
 
         /// <summary>
+        /// Friend list functions
+        /// </summary>
+        public FriendList FriendList { get; }
+
+        /// <summary>
         /// Journal functions
         /// </summary>
         public Journal Journal { get; }
@@ -112,6 +118,7 @@ namespace XivCommon {
             this.NamePlates = new NamePlates(this, scanner, hooks.HasFlag(Hooks.NamePlates));
             this.DutyFinder = new DutyFinder(this, scanner);
             this.Journal = new Journal(this, scanner);
+            this.FriendList = new FriendList(this);
 
             if (scanner.TryScanText(Signatures.GetAgentByInternalId, out var byInternalIdPtr, "GetAgentByInternalId")) {
                 this.GetAgentByInternalIdInternal = Marshal.GetDelegateForFunctionPointer<GetAgentByInternalIdDelegate>(byInternalIdPtr);
