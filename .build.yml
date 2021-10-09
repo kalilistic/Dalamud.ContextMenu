@@ -1,0 +1,18 @@
+image: fedora/latest
+packages:
+  - dotnet
+  - wget
+  - unzip
+tasks:
+  - download-dalamud: |
+      mkdir dalamud
+      cd dalamud
+      wget https://github.com/goatcorp/dalamud-distrib/raw/main/latest.zip
+      unzip latest.zip
+      rm latest.zip
+  - build-plugin: |
+      cd XivCommon/XivCommon
+      dotnet build -c Release -p:IsCI=true
+artifacts:
+  - XivCommon/XivCommon/bin/Release/net5-windows/XivCommon.dll
+  - XivCommon/XivCommon/bin/Release/net5-windows/XivCommon.pdb
