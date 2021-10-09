@@ -19,21 +19,33 @@
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
     </PropertyGroup>
 
+    <PropertyGroup>
+        <Dalamud>$(AppData)\XIVLauncher\addon\Hooks\dev</Dalamud>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Linux'))">
+        <Dalamud>$(HOME)/games/final-fantasy-xiv-online/drive_c/users/ascclemens/AppData/Roaming/XIVLauncher/addon/Hooks/dev</Dalamud>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(IsCI)' == 'true'">
+        <Dalamud>$(HOME)/dalamud</Dalamud>
+    </PropertyGroup>
+
     <ItemGroup>
         <Reference Include="Dalamud">
-            <HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\Dalamud.dll</HintPath>
+            <HintPath>$(Dalamud)\Dalamud.dll</HintPath>
             <Private>False</Private>
         </Reference>
         <Reference Include="FFXIVClientStructs">
-            <HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\FFXIVClientStructs.dll</HintPath>
+            <HintPath>$(Dalamud)\FFXIVClientStructs.dll</HintPath>
             <Private>False</Private>
         </Reference>
         <Reference Include="Lumina">
-            <HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\Lumina.dll</HintPath>
+            <HintPath>$(Dalamud)\Lumina.dll</HintPath>
             <Private>False</Private>
         </Reference>
         <Reference Include="Lumina.Excel">
-            <HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\Lumina.Excel.dll</HintPath>
+            <HintPath>$(Dalamud)\Lumina.Excel.dll</HintPath>
             <Private>False</Private>
         </Reference>
     </ItemGroup>
