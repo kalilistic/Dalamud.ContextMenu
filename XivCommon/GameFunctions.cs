@@ -1,40 +1,26 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using Dalamud.Game;
 using Dalamud.Game.ClientState;
 using Dalamud.Game.ClientState.Objects;
 using Dalamud.Game.Gui;
 using Dalamud.Game.Gui.PartyFinder;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using XivCommon.Functions;
 using XivCommon.Functions.ContextMenu;
 using XivCommon.Functions.FriendList;
 using XivCommon.Functions.NamePlates;
 using XivCommon.Functions.Tooltips;
+using Framework = FFXIVClientStructs.FFXIV.Client.System.Framework.Framework;
 
 namespace XivCommon {
     /// <summary>
     /// A class containing game functions
     /// </summary>
     public class GameFunctions : IDisposable {
-        private static class Signatures {
-            internal const string GetAgentByInternalId = "E8 ?? ?? ?? ?? 83 FF 0D";
-            internal const string GetAtkStageSingleton = "E8 ?? ?? ?? ?? 41 B8 01 00 00 00 48 8D 15 ?? ?? ?? ?? 48 8B 48 20 E8 ?? ?? ?? ?? 48 8B CF";
-        }
-
-        private delegate IntPtr GetAtkStageSingletonDelegate();
-
-        private delegate IntPtr GetAgentModuleDelegate(IntPtr basePtr);
-
-        private delegate IntPtr GetAtkModuleDelegate(IntPtr uiModule);
-
-        private delegate IntPtr GetAgentByInternalIdDelegate(IntPtr agentModule, uint id);
-
         private GameGui GameGui { get; }
 
-        private GetAgentByInternalIdDelegate? GetAgentByInternalIdInternal { get; }
-
-        private GetAtkStageSingletonDelegate? GetAtkStageSingletonInternal { get; }
+        private Dalamud.Game.Framework Framework { get; }
 
         internal UiAlloc UiAlloc { get; }
 
@@ -99,6 +85,7 @@ namespace XivCommon {
         public Journal Journal { get; }
 
         internal GameFunctions(Hooks hooks) {
+            this.Framework = Util.GetService<Dalamud.Game.Framework>();
             this.GameGui = Util.GetService<GameGui>();
 
             var clientState = Util.GetService<ClientState>();
@@ -119,14 +106,6 @@ namespace XivCommon {
             this.DutyFinder = new DutyFinder(this, scanner);
             this.Journal = new Journal(this, scanner);
             this.FriendList = new FriendList(this);
-
-            if (scanner.TryScanText(Signatures.GetAgentByInternalId, out var byInternalIdPtr, "GetAgentByInternalId")) {
-                this.GetAgentByInternalIdInternal = Marshal.GetDelegateForFunctionPointer<GetAgentByInternalIdDelegate>(byInternalIdPtr);
-            }
-
-            if (scanner.TryScanText(Signatures.GetAtkStageSingleton, out var getSingletonPtr, "GetAtkStageSingleton")) {
-                this.GetAtkStageSingletonInternal = Marshal.GetDelegateForFunctionPointer<GetAtkStageSingletonDelegate>(getSingletonPtr);
-            }
         }
 
         /// <inheritdoc />
@@ -141,52 +120,38 @@ namespace XivCommon {
         }
 
         /// <summary>
+        /// Convenience method to get a pointer to <see cref="Framework"/>.
+        /// </summary>
+        /// <returns>pointer to struct</returns>
+        public unsafe Framework* GetFramework() {
+            return (Framework*) this.Framework.Address.BaseAddress;
+        }
+
+        /// <summary>
         /// Gets the pointer to the UI module
         /// </summary>
         /// <returns>Pointer</returns>
-        public IntPtr GetUiModule() {
-            return this.GameGui.GetUIModule();
+        [Obsolete("Use GetFramework()->GetUiModule()")]
+        public unsafe IntPtr GetUiModule() {
+            return (IntPtr) this.GetFramework()->GetUiModule();
         }
 
         /// <summary>
         /// Gets the pointer to the RaptureAtkModule
         /// </summary>
         /// <returns>Pointer</returns>
-        public IntPtr GetAtkModule() {
-            var uiModule = this.GetUiModule();
-            if (uiModule == IntPtr.Zero) {
-                return IntPtr.Zero;
-            }
-
-            var getAtkModulePtr = FollowPtrChain(uiModule, new[] { 0, 0x38 });
-            if (getAtkModulePtr == IntPtr.Zero) {
-                return IntPtr.Zero;
-            }
-
-            var getAtkModule = Marshal.GetDelegateForFunctionPointer<GetAtkModuleDelegate>(getAtkModulePtr);
-            return getAtkModule(uiModule);
+        [Obsolete("Use GetFramework()->GetUiModule()->GetRaptureAtkModule()")]
+        public unsafe IntPtr GetAtkModule() {
+            return (IntPtr) this.GetFramework()->GetUiModule()->GetRaptureAtkModule();
         }
 
         /// <summary>
         /// Gets the pointer to the agent module
         /// </summary>
         /// <returns>Pointer</returns>
-        public IntPtr GetAgentModule() {
-            var uiModule = this.GetUiModule();
-            var getAgentModulePtr = FollowPtrChain(uiModule, new[] { 0, 0x110 });
-            var getAgentModule = Marshal.GetDelegateForFunctionPointer<GetAgentModuleDelegate>(getAgentModulePtr);
-            return getAgentModule(uiModule);
-        }
-
-        private static IntPtr FollowPtrChain(IntPtr start, IEnumerable<int> offsets) {
-            foreach (var offset in offsets) {
-                start = Marshal.ReadIntPtr(start, offset);
-                if (start == IntPtr.Zero) {
-                    break;
-                }
-            }
-
-            return start;
+        [Obsolete("Use GetFramework()->GetUiModule()->GetAgentModule()")]
+        public unsafe IntPtr GetAgentModule() {
+            return (IntPtr) this.GetFramework()->GetUiModule()->GetAgentModule();
         }
 
         /// <summary>
@@ -195,13 +160,9 @@ namespace XivCommon {
         /// <param name="id">internal id of agent</param>
         /// <returns>Pointer</returns>
         /// <exception cref="InvalidOperationException">if the signature for the function could not be found</exception>
-        public IntPtr GetAgentByInternalId(uint id) {
-            if (this.GetAgentByInternalIdInternal == null) {
-                throw new InvalidOperationException("Could not find signature for GetAgentByInternalId");
-            }
-
-            var agent = this.GetAgentModule();
-            return this.GetAgentByInternalIdInternal(agent, id);
+        [Obsolete("Use GetFramework()->GetUiModule()->GetAgentModule()->GetAgentByInternalId(AgentId)")]
+        public unsafe IntPtr GetAgentByInternalId(uint id) {
+            return (IntPtr) this.GetFramework()->GetUiModule()->GetAgentModule()->GetAgentByInternalId((AgentId) id);
         }
 
         /// <summary>
@@ -209,12 +170,9 @@ namespace XivCommon {
         /// </summary>
         /// <returns>Pointer</returns>
         /// <exception cref="InvalidOperationException">if the signature for the function could not be found</exception>
-        public IntPtr GetAtkStageSingleton() {
-            if (this.GetAtkStageSingletonInternal == null) {
-                throw new InvalidOperationException("Could not find signature for GetAtkStageSingleton");
-            }
-
-            return this.GetAtkStageSingletonInternal();
+        [Obsolete("Use AtkStage.GetSingleton()")]
+        public unsafe IntPtr GetAtkStageSingleton() {
+            return (IntPtr) AtkStage.GetSingleton();
         }
     }
 }

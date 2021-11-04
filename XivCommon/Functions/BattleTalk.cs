@@ -113,7 +113,7 @@ namespace XivCommon.Functions {
             this.Show(sender.Encode(), message.Encode(), options);
         }
 
-        private void Show(byte[] sender, byte[] message, BattleTalkOptions? options) {
+        private unsafe void Show(byte[] sender, byte[] message, BattleTalkOptions? options) {
             if (sender.Length == 0) {
                 throw new ArgumentException("sender cannot be empty", nameof(sender));
             }
@@ -128,15 +128,13 @@ namespace XivCommon.Functions {
 
             options ??= new BattleTalkOptions();
 
-            var uiModule = this.Functions.GetUiModule();
+            var uiModule = (IntPtr) this.Functions.GetFramework()->GetUiModule();
 
-            unsafe {
-                fixed (byte* senderPtr = sender.Terminate(), messagePtr = message.Terminate()) {
-                    if (this.HookEnabled) {
-                        this.AddBattleTalkDetour(uiModule, (IntPtr) senderPtr, (IntPtr) messagePtr, options.Duration, (byte) options.Style);
-                    } else {
-                        this.AddBattleTalk(uiModule, (IntPtr) senderPtr, (IntPtr) messagePtr, options.Duration, (byte) options.Style);
-                    }
+            fixed (byte* senderPtr = sender.Terminate(), messagePtr = message.Terminate()) {
+                if (this.HookEnabled) {
+                    this.AddBattleTalkDetour(uiModule, (IntPtr) senderPtr, (IntPtr) messagePtr, options.Duration, (byte) options.Style);
+                } else {
+                    this.AddBattleTalk(uiModule, (IntPtr) senderPtr, (IntPtr) messagePtr, options.Duration, (byte) options.Style);
                 }
             }
         }

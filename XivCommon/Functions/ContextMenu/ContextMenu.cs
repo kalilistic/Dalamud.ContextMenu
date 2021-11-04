@@ -8,6 +8,7 @@ using Dalamud;
 using Dalamud.Game;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Hooking;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using XivCommon.Functions.ContextMenu.Inventory;
 using ValueType = FFXIVClientStructs.FFXIV.Component.GUI.ValueType;
@@ -281,13 +282,17 @@ namespace XivCommon.Functions.ContextMenu {
             Unknown,
         }
 
-        private (AgentType agentType, IntPtr agent) GetContextMenuAgent(IntPtr? agent = null) {
+        private unsafe (AgentType agentType, IntPtr agent) GetContextMenuAgent(IntPtr? agent = null) {
             agent ??= this.Agent;
 
+            IntPtr GetAgent(AgentId id) {
+                return (IntPtr) this.Functions.GetFramework()->GetUiModule()->GetAgentModule()->GetAgentByInternalId(id);
+            }
+
             var agentType = AgentType.Unknown;
-            if (agent == this.Functions.GetAgentByInternalId(9u)) {
+            if (agent == GetAgent(AgentId.Context)) {
                 agentType = AgentType.Normal;
-            } else if (agent == this.Functions.GetAgentByInternalId(10u)) {
+            } else if (agent == GetAgent(AgentId.InventoryContext)) {
                 agentType = AgentType.Inventory;
             }
 
@@ -300,7 +305,7 @@ namespace XivCommon.Functions.ContextMenu {
                 return null;
             }
 
-            var stage = (AtkStage*) this.Functions.GetAtkStageSingleton();
+            var stage = AtkStage.GetSingleton();
             var parentAddon = this._getAddonByInternalId((IntPtr) stage->RaptureAtkUnitManager, parentAddonId);
             return Encoding.UTF8.GetString(Util.ReadTerminated(parentAddon + 8));
         }
@@ -311,7 +316,7 @@ namespace XivCommon.Functions.ContextMenu {
                 return IntPtr.Zero;
             }
 
-            var stage = (AtkStage*) this.Functions.GetAtkStageSingleton();
+            var stage = AtkStage.GetSingleton();
             return this._getAddonByInternalId((IntPtr) stage->RaptureAtkUnitManager, addonId);
         }
 

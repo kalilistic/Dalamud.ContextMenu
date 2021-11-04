@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 
 namespace XivCommon.Functions.FriendList {
     /// <summary>
@@ -22,37 +23,39 @@ namespace XivCommon.Functions.FriendList {
         /// The list is empty if not logged in.
         /// </para>
         /// </summary>
-        public IList<FriendListEntry> List {
+        public unsafe IList<FriendListEntry> List {
             get {
-                var friendListAgent = this.Functions.GetAgentByInternalId(FriendListAgentId);
+                var friendListAgent = (IntPtr) this.Functions
+                    .GetFramework()
+                    ->GetUiModule()
+                    ->GetAgentModule()
+                    ->GetAgentByInternalId(AgentId.FriendList);
                 if (friendListAgent == IntPtr.Zero) {
                     return Array.Empty<FriendListEntry>();
                 }
 
-                unsafe {
-                    var info = *(IntPtr*) (friendListAgent + InfoOffset);
-                    if (info == IntPtr.Zero) {
-                        return Array.Empty<FriendListEntry>();
-                    }
-
-                    var length = *(ushort*) (info + LengthOffset);
-                    if (length == 0) {
-                        return Array.Empty<FriendListEntry>();
-                    }
-
-                    var list = *(IntPtr*) (info + ListOffset);
-                    if (list == IntPtr.Zero) {
-                        return Array.Empty<FriendListEntry>();
-                    }
-
-                    var entries = new List<FriendListEntry>(length);
-                    for (var i = 0; i < length; i++) {
-                        var entry = *(FriendListEntry*) (list + i * FriendListEntry.Size);
-                        entries.Add(entry);
-                    }
-
-                    return entries;
+                var info = *(IntPtr*) (friendListAgent + InfoOffset);
+                if (info == IntPtr.Zero) {
+                    return Array.Empty<FriendListEntry>();
                 }
+
+                var length = *(ushort*) (info + LengthOffset);
+                if (length == 0) {
+                    return Array.Empty<FriendListEntry>();
+                }
+
+                var list = *(IntPtr*) (info + ListOffset);
+                if (list == IntPtr.Zero) {
+                    return Array.Empty<FriendListEntry>();
+                }
+
+                var entries = new List<FriendListEntry>(length);
+                for (var i = 0; i < length; i++) {
+                    var entry = *(FriendListEntry*) (list + i * FriendListEntry.Size);
+                    entries.Add(entry);
+                }
+
+                return entries;
             }
         }
 

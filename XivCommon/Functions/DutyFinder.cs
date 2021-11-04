@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using Dalamud.Game;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using Lumina.Excel.GeneratedSheets;
 
 namespace XivCommon.Functions {
@@ -49,12 +50,12 @@ namespace XivCommon.Functions {
         /// </summary>
         /// <param name="contentFinderCondition">ID of duty to show</param>
         /// <exception cref="InvalidOperationException">if the open duty function could not be found in memory</exception>
-        public void OpenDuty(uint contentFinderCondition) {
+        public unsafe void OpenDuty(uint contentFinderCondition) {
             if (this._openDuty == null) {
                 throw new InvalidOperationException("Could not find signature for open duty function");
             }
 
-            var agent = this.Functions.GetAgentByInternalId(ContentsFinderAgentId);
+            var agent = (IntPtr) this.Functions.GetFramework()->GetUiModule()->GetAgentModule()->GetAgentByInternalId(AgentId.ContentsFinder);
 
             this._openDuty(agent, contentFinderCondition, 0);
         }
@@ -71,12 +72,12 @@ namespace XivCommon.Functions {
         /// Opens the Duty Finder to the given roulette ID.
         /// </summary>
         /// <param name="roulette">ID of roulette to show</param>
-        public void OpenRoulette(byte roulette) {
+        public unsafe void OpenRoulette(byte roulette) {
             if (this._openRoulette == null) {
                 throw new InvalidOperationException("Could not find signature for open roulette function");
             }
 
-            var agent = this.Functions.GetAgentByInternalId(ContentsFinderAgentId);
+            var agent = (IntPtr) this.Functions.GetFramework()->GetUiModule()->GetAgentModule()->GetAgentByInternalId(AgentId.ContentsFinder);
 
             this._openRoulette(agent, roulette, 0);
         }

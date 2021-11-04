@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using Dalamud.Game;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using Lumina.Excel.GeneratedSheets;
 
 namespace XivCommon.Functions {
@@ -50,12 +51,12 @@ namespace XivCommon.Functions {
         /// </summary>
         /// <param name="questId">ID of quest to show</param>
         /// <exception cref="InvalidOperationException">if the open quest function could not be found in memory</exception>
-        public void OpenQuest(uint questId) {
+        public unsafe void OpenQuest(uint questId) {
             if (this._openQuest == null) {
                 throw new InvalidOperationException("Could not find signature for open quest function");
             }
 
-            var agent = this.Functions.GetAgentByInternalId(JournalAgentId);
+            var agent = (IntPtr) this.Functions.GetFramework()->GetUiModule()->GetAgentModule()->GetAgentByInternalId(AgentId.Journal);
 
             this._openQuest(agent, (int) (questId & 0xFFFF), 1, 0, 1);
         }

@@ -97,7 +97,7 @@ namespace XivCommon.Functions.NamePlates {
                 return;
             }
 
-            var atkModule = (RaptureAtkModule*) this.Functions.GetAtkModule();
+            var atkModule = this.Functions.GetFramework()->GetUiModule()->GetRaptureAtkModule();
 
             var active = numbers->IntArray[0];
 

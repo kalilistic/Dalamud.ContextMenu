@@ -32,12 +32,12 @@ namespace XivCommon.Functions {
         /// </summary>
         /// <param name="message">Message to send</param>
         /// <exception cref="InvalidOperationException">If the signature for this function could not be found</exception>
-        public void SendMessage(string message) {
+        public unsafe void SendMessage(string message) {
             if (this.ProcessChatBox == null) {
                 throw new InvalidOperationException("Could not find signature for chat sending");
             }
 
-            var uiModule = this.Functions.GetUiModule();
+            var uiModule = (IntPtr) this.Functions.GetFramework()->GetUiModule();
 
             using var payload = new ChatPayload(message);
             var mem1 = Marshal.AllocHGlobal(400);

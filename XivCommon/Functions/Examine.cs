@@ -41,7 +41,7 @@ namespace XivCommon.Functions {
         /// </summary>
         /// <param name="objectId">Object ID to open window for</param>
         /// <exception cref="InvalidOperationException">If the signature for this function could not be found</exception>
-        public void OpenExamineWindow(uint objectId) {
+        public unsafe void OpenExamineWindow(uint objectId) {
             if (this.RequestCharacterInfo == null) {
                 throw new InvalidOperationException("Could not find signature for Examine function");
             }
@@ -51,19 +51,17 @@ namespace XivCommon.Functions {
             // offsets and stuff come from the beginning of case 0x2c (around line 621 in IDA)
             // if 29f8 ever changes, I'd just scan for it in old binary and find what it is in the new binary at the same spot
             // 40 55 53 57 41 54 41 55 41 56 48 8D 6C 24 ??
-            var agentModule = this.Functions.GetAgentModule();
+            var agentModule = (IntPtr) this.Functions.GetFramework()->GetUiModule()->GetAgentModule();
             var rciData = Marshal.ReadIntPtr(agentModule + 0x1A0);
 
-            unsafe {
-                // offsets at sig E8 ?? ?? ?? ?? 33 C0 EB 4C
-                // this is called at the end of the 2c case
-                var raw = (uint*) rciData;
-                *(raw + 10) = objectId;
-                *(raw + 11) = objectId;
-                *(raw + 12) = objectId;
-                *(raw + 13) = 0xE0000000;
-                *(raw + 311) = 0;
-            }
+            // offsets at sig E8 ?? ?? ?? ?? 33 C0 EB 4C
+            // this is called at the end of the 2c case
+            var raw = (uint*) rciData;
+            *(raw + 10) = objectId;
+            *(raw + 11) = objectId;
+            *(raw + 12) = objectId;
+            *(raw + 13) = 0xE0000000;
+            *(raw + 311) = 0;
 
             this.RequestCharacterInfo(rciData);
         }
