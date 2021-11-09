@@ -9,6 +9,7 @@ using FFXIVClientStructs.FFXIV.Component.GUI;
 using XivCommon.Functions;
 using XivCommon.Functions.ContextMenu;
 using XivCommon.Functions.FriendList;
+using XivCommon.Functions.Housing;
 using XivCommon.Functions.NamePlates;
 using XivCommon.Functions.Tooltips;
 using Framework = FFXIVClientStructs.FFXIV.Client.System.Framework.Framework;
@@ -83,6 +84,11 @@ namespace XivCommon {
         /// Journal functions
         /// </summary>
         public Journal Journal { get; }
+        
+        /// <summary>
+        /// Housing functions
+        /// </summary>
+        public Housing Housing { get; }
 
         internal GameFunctions(Hooks hooks) {
             this.Framework = Util.GetService<Dalamud.Game.Framework>();
@@ -106,6 +112,7 @@ namespace XivCommon {
             this.DutyFinder = new DutyFinder(this, scanner);
             this.Journal = new Journal(this, scanner);
             this.FriendList = new FriendList(this);
+            this.Housing = new Housing(scanner);
         }
 
         /// <inheritdoc />

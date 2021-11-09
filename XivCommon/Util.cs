@@ -44,5 +44,20 @@ namespace XivCommon {
             var get = service.GetMethod("Get", BindingFlags.Public | BindingFlags.Static)!;
             return (T) get.Invoke(null, null)!;
         }
+        
+        internal static unsafe IntPtr FollowPointerChain(IntPtr start, IEnumerable<int> offsets) {
+            if (start == IntPtr.Zero) {
+                return IntPtr.Zero;
+            }
+
+            foreach (var offset in offsets) {
+                start = *(IntPtr*) (start + offset);
+                if (start == IntPtr.Zero) {
+                    return IntPtr.Zero;
+                }
+            }
+
+            return start;
+        }
     }
 }
