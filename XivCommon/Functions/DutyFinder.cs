@@ -14,8 +14,6 @@ namespace XivCommon.Functions {
             internal const string OpenRoulette = "E9 ?? ?? ?? ?? 8B 93 ?? ?? ?? ?? 48 83 C4 20";
         }
 
-        private const uint ContentsFinderAgentId = 50;
-
         private delegate IntPtr OpenDutyDelegate(IntPtr agent, uint contentFinderCondition, byte a3);
 
         private delegate IntPtr OpenRouletteDelegate(IntPtr agent, byte roulette, byte a3);

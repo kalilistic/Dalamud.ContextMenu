@@ -8,7 +8,6 @@ namespace XivCommon.Functions.FriendList {
     /// </summary>
     public class FriendList {
         // Updated: 5.58-HF1
-        private const uint FriendListAgentId = 54;
         private const int InfoOffset = 0x28;
         private const int LengthOffset = 0x10;
         private const int ListOffset = 0x98;
