@@ -100,18 +100,18 @@ namespace XivCommon {
             var scanner = Util.GetService<SigScanner>();
 
             this.UiAlloc = new UiAlloc(scanner);
-            this.Chat = new Chat(this, scanner);
+            this.Chat = new Chat(scanner);
             this.PartyFinder = new PartyFinder(scanner, partyFinderGui, hooks);
-            this.BattleTalk = new BattleTalk(this, scanner, hooks.HasFlag(Hooks.BattleTalk));
-            this.Examine = new Examine(this, scanner);
+            this.BattleTalk = new BattleTalk(scanner, hooks.HasFlag(Hooks.BattleTalk));
+            this.Examine = new Examine(scanner);
             this.Talk = new Talk(scanner, hooks.HasFlag(Hooks.Talk));
             this.ChatBubbles = new ChatBubbles(objectTable, scanner, hooks.HasFlag(Hooks.ChatBubbles));
             this.ContextMenu = new ContextMenu(this, scanner, clientState.ClientLanguage, hooks);
             this.Tooltips = new Tooltips(scanner, this.GameGui, hooks.HasFlag(Hooks.Tooltips));
             this.NamePlates = new NamePlates(this, scanner, hooks.HasFlag(Hooks.NamePlates));
-            this.DutyFinder = new DutyFinder(this, scanner);
-            this.Journal = new Journal(this, scanner);
-            this.FriendList = new FriendList(this);
+            this.DutyFinder = new DutyFinder(scanner);
+            this.Journal = new Journal(scanner);
+            this.FriendList = new FriendList();
             this.Housing = new Housing(scanner);
         }
 
@@ -130,6 +130,7 @@ namespace XivCommon {
         /// Convenience method to get a pointer to <see cref="Framework"/>.
         /// </summary>
         /// <returns>pointer to struct</returns>
+        [Obsolete("Use Framework.Instance()")]
         public unsafe Framework* GetFramework() {
             return (Framework*) this.Framework.Address.BaseAddress;
         }
@@ -138,7 +139,7 @@ namespace XivCommon {
         /// Gets the pointer to the UI module
         /// </summary>
         /// <returns>Pointer</returns>
-        [Obsolete("Use GetFramework()->GetUiModule()")]
+        [Obsolete("Use Framework.Instance()->GetUiModule()")]
         public unsafe IntPtr GetUiModule() {
             return (IntPtr) this.GetFramework()->GetUiModule();
         }
@@ -147,7 +148,7 @@ namespace XivCommon {
         /// Gets the pointer to the RaptureAtkModule
         /// </summary>
         /// <returns>Pointer</returns>
-        [Obsolete("Use GetFramework()->GetUiModule()->GetRaptureAtkModule()")]
+        [Obsolete("Use Framework.Instance()->GetUiModule()->GetRaptureAtkModule()")]
         public unsafe IntPtr GetAtkModule() {
             return (IntPtr) this.GetFramework()->GetUiModule()->GetRaptureAtkModule();
         }
@@ -156,7 +157,7 @@ namespace XivCommon {
         /// Gets the pointer to the agent module
         /// </summary>
         /// <returns>Pointer</returns>
-        [Obsolete("Use GetFramework()->GetUiModule()->GetAgentModule()")]
+        [Obsolete("Use Framework.Instance()->GetUiModule()->GetAgentModule()")]
         public unsafe IntPtr GetAgentModule() {
             return (IntPtr) this.GetFramework()->GetUiModule()->GetAgentModule();
         }
@@ -167,7 +168,7 @@ namespace XivCommon {
         /// <param name="id">internal id of agent</param>
         /// <returns>Pointer</returns>
         /// <exception cref="InvalidOperationException">if the signature for the function could not be found</exception>
-        [Obsolete("Use GetFramework()->GetUiModule()->GetAgentModule()->GetAgentByInternalId(AgentId)")]
+        [Obsolete("Use Framework.Instance()->GetUiModule()->GetAgentModule()->GetAgentByInternalId(AgentId)")]
         public unsafe IntPtr GetAgentByInternalId(uint id) {
             return (IntPtr) this.GetFramework()->GetUiModule()->GetAgentModule()->GetAgentByInternalId((AgentId) id);
         }

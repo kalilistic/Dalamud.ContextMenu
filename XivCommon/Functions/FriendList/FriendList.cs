@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using FFXIVClientStructs.FFXIV.Client.System.Framework;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 
 namespace XivCommon.Functions.FriendList {
@@ -12,8 +13,6 @@ namespace XivCommon.Functions.FriendList {
         private const int LengthOffset = 0x10;
         private const int ListOffset = 0x98;
 
-        private GameFunctions Functions { get; }
-
         /// <summary>
         /// <para>
         /// A live list of the currently-logged-in player's friends.
@@ -24,8 +23,7 @@ namespace XivCommon.Functions.FriendList {
         /// </summary>
         public unsafe IList<FriendListEntry> List {
             get {
-                var friendListAgent = (IntPtr) this.Functions
-                    .GetFramework()
+                var friendListAgent = (IntPtr) Framework.Instance()
                     ->GetUiModule()
                     ->GetAgentModule()
                     ->GetAgentByInternalId(AgentId.FriendList);
@@ -58,8 +56,7 @@ namespace XivCommon.Functions.FriendList {
             }
         }
 
-        internal FriendList(GameFunctions functions) {
-            this.Functions = functions;
+        internal FriendList() {
         }
     }
 }

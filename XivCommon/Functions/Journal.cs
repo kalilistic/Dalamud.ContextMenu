@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using Dalamud.Game;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using Lumina.Excel.GeneratedSheets;
+using Framework = FFXIVClientStructs.FFXIV.Client.System.Framework.Framework;
 
 namespace XivCommon.Functions {
     /// <summary>
@@ -14,20 +15,14 @@ namespace XivCommon.Functions {
             internal const string IsQuestCompleted = "E8 ?? ?? ?? ?? 41 88 84 2C ?? ?? ?? ??";
         }
 
-        private const int JournalAgentId = 31;
-
         private delegate IntPtr OpenQuestDelegate(IntPtr agent, int questId, int a3, ushort a4, byte a5);
 
         private delegate byte IsQuestCompletedDelegate(ushort questId);
 
-        private GameFunctions Functions { get; }
-
         private readonly OpenQuestDelegate? _openQuest;
         private readonly IsQuestCompletedDelegate? _isQuestCompleted;
 
-        internal Journal(GameFunctions functions, SigScanner scanner) {
-            this.Functions = functions;
-
+        internal Journal(SigScanner scanner) {
             if (scanner.TryScanText(Signatures.OpenQuest, out var openQuestPtr, "Journal (open quest)")) {
                 this._openQuest = Marshal.GetDelegateForFunctionPointer<OpenQuestDelegate>(openQuestPtr);
             }
@@ -56,7 +51,7 @@ namespace XivCommon.Functions {
                 throw new InvalidOperationException("Could not find signature for open quest function");
             }
 
-            var agent = (IntPtr) this.Functions.GetFramework()->GetUiModule()->GetAgentModule()->GetAgentByInternalId(AgentId.Journal);
+            var agent = (IntPtr) Framework.Instance()->GetUiModule()->GetAgentModule()->GetAgentByInternalId(AgentId.Journal);
 
             this._openQuest(agent, (int) (questId & 0xFFFF), 1, 0, 1);
         }

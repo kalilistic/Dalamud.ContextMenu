@@ -5,6 +5,7 @@ using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Hooking;
 using FFXIVClientStructs.FFXIV.Client.Graphics;
 using FFXIVClientStructs.FFXIV.Client.UI;
+using Framework = FFXIVClientStructs.FFXIV.Client.System.Framework.Framework;
 
 namespace XivCommon.Functions.NamePlates {
     /// <summary>
@@ -97,7 +98,7 @@ namespace XivCommon.Functions.NamePlates {
                 return;
             }
 
-            var atkModule = this.Functions.GetFramework()->GetUiModule()->GetRaptureAtkModule();
+            var atkModule = Framework.Instance()->GetUiModule()->GetRaptureAtkModule();
 
             var active = numbers->IntArray[0];
 

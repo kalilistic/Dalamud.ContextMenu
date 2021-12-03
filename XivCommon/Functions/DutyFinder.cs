@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using Dalamud.Game;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using Lumina.Excel.GeneratedSheets;
+using Framework = FFXIVClientStructs.FFXIV.Client.System.Framework.Framework;
 
 namespace XivCommon.Functions {
     /// <summary>
@@ -18,13 +19,10 @@ namespace XivCommon.Functions {
 
         private delegate IntPtr OpenRouletteDelegate(IntPtr agent, byte roulette, byte a3);
 
-        private GameFunctions Functions { get; }
         private readonly OpenDutyDelegate? _openDuty;
         private readonly OpenRouletteDelegate? _openRoulette;
 
-        internal DutyFinder(GameFunctions functions, SigScanner scanner) {
-            this.Functions = functions;
-
+        internal DutyFinder(SigScanner scanner) {
             if (scanner.TryScanText(Signatures.OpenRegularDuty, out var openDutyPtr, "Duty Finder (open duty)")) {
                 this._openDuty = Marshal.GetDelegateForFunctionPointer<OpenDutyDelegate>(openDutyPtr);
             }
@@ -53,7 +51,7 @@ namespace XivCommon.Functions {
                 throw new InvalidOperationException("Could not find signature for open duty function");
             }
 
-            var agent = (IntPtr) this.Functions.GetFramework()->GetUiModule()->GetAgentModule()->GetAgentByInternalId(AgentId.ContentsFinder);
+            var agent = (IntPtr) Framework.Instance()->GetUiModule()->GetAgentModule()->GetAgentByInternalId(AgentId.ContentsFinder);
 
             this._openDuty(agent, contentFinderCondition, 0);
         }
@@ -75,7 +73,7 @@ namespace XivCommon.Functions {
                 throw new InvalidOperationException("Could not find signature for open roulette function");
             }
 
-            var agent = (IntPtr) this.Functions.GetFramework()->GetUiModule()->GetAgentModule()->GetAgentByInternalId(AgentId.ContentsFinder);
+            var agent = (IntPtr) Framework.Instance()->GetUiModule()->GetAgentModule()->GetAgentByInternalId(AgentId.ContentsFinder);
 
             this._openRoulette(agent, roulette, 0);
         }

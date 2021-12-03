@@ -11,6 +11,7 @@ using Dalamud.Hooking;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using XivCommon.Functions.ContextMenu.Inventory;
+using Framework = FFXIVClientStructs.FFXIV.Client.System.Framework.Framework;
 using ValueType = FFXIVClientStructs.FFXIV.Component.GUI.ValueType;
 
 namespace XivCommon.Functions.ContextMenu {
@@ -286,7 +287,7 @@ namespace XivCommon.Functions.ContextMenu {
             agent ??= this.Agent;
 
             IntPtr GetAgent(AgentId id) {
-                return (IntPtr) this.Functions.GetFramework()->GetUiModule()->GetAgentModule()->GetAgentByInternalId(id);
+                return (IntPtr) Framework.Instance()->GetUiModule()->GetAgentModule()->GetAgentByInternalId(id);
             }
 
             var agentType = AgentType.Unknown;
