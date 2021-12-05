@@ -12,7 +12,7 @@ namespace XivCommon.Functions {
     public class Journal {
         private static class Signatures {
             internal const string OpenQuest = "E8 ?? ?? ?? ?? 48 8B 74 24 ?? 48 8B 7C 24 ?? 48 83 C4 30 5B C3 48 8B CB";
-            internal const string IsQuestCompleted = "E8 ?? ?? ?? ?? 41 88 84 2C ?? ?? ?? ??";
+            internal const string IsQuestCompleted = "E8 ?? ?? ?? ?? 41 88 84 2C";
         }
 
         private delegate IntPtr OpenQuestDelegate(IntPtr agent, int questId, int a3, ushort a4, byte a5);

@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using Dalamud.Game;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Hooking;
+using Framework = FFXIVClientStructs.FFXIV.Client.System.Framework.Framework;
 
 namespace XivCommon.Functions {
     /// <summary>
@@ -10,10 +11,10 @@ namespace XivCommon.Functions {
     /// </summary>
     public class BattleTalk : IDisposable {
         private static class Signatures {
-            internal const string AddBattleTalk = "48 89 5C 24 ?? 57 48 83 EC 50 48 8B 01 49 8B D8 0F 29 74 24 ?? 48 8B FA 0F 28 F3 FF 50 40 C7 44 24 ?? ?? ?? ?? ??";
+            // FIXME
+            internal const string AddBattleTalk = "48 89 5C 24 ?? 57 48 83 EC 50 48 8B 01 49 8B D8 0F 29 74 24 ?? 48 8B FA 0F 28 F3 FF 50 40 C7 44 24 ?? ?? ?? ?? ?? 0F 28 DE 48 8B C8 C7 44 24 ?? ?? ?? ?? ?? 8B 84 24 ?? ?? ?? ?? 4C 8B C3 C6 44 24 ?? ?? 48 8B D7 89 44 24 20 E8 ?? ?? ?? ?? 48 8B 5C 24 ?? 0F 28 74 24 ?? 48 83 C4 50 5F C3 CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC 48 89 5C 24 ?? 57 48 83 EC 50 48 8B 01 49 8B D8 0F 29 74 24 ?? 48 8B FA 0F 28 F3 FF 50 40 C7 44 24";
         }
 
-        private GameFunctions Functions { get; }
         private bool HookEnabled { get; }
 
         /// <summary>
@@ -36,8 +37,7 @@ namespace XivCommon.Functions {
         private AddBattleTalkDelegate? AddBattleTalk { get; }
         private Hook<AddBattleTalkDelegate>? AddBattleTalkHook { get; }
 
-        internal BattleTalk(GameFunctions functions, SigScanner scanner,bool hook) {
-            this.Functions = functions;
+        internal BattleTalk(SigScanner scanner,bool hook) {
             this.HookEnabled = hook;
 
             if (scanner.TryScanText(Signatures.AddBattleTalk, out var addBattleTalkPtr, "battle talk")) {
@@ -128,7 +128,7 @@ namespace XivCommon.Functions {
 
             options ??= new BattleTalkOptions();
 
-            var uiModule = (IntPtr) this.Functions.GetFramework()->GetUiModule();
+            var uiModule = (IntPtr) Framework.Instance()->GetUiModule();
 
             fixed (byte* senderPtr = sender.Terminate(), messagePtr = message.Terminate()) {
                 if (this.HookEnabled) {

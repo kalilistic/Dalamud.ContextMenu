@@ -12,7 +12,7 @@ namespace XivCommon.Functions {
     /// </summary>
     public class PartyFinder : IDisposable {
         private static class Signatures {
-            internal const string RequestListings = "48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC 40 0F 10 81 ?? ?? ?? ??";
+            internal const string RequestListings = "48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC 40 0F 10 81";
             internal const string JoinCrossParty = "E8 ?? ?? ?? ?? 0F B7 47 28";
         }
 
@@ -146,8 +146,8 @@ namespace XivCommon.Functions {
                 throw new InvalidOperationException("PartyFinder hooks are not enabled");
             }
 
-            // Updated 5.5
-            const int categoryOffset = 10_655;
+            // Updated 6.0
+            const int categoryOffset = 11_031;
 
             if (this.PartyFinderAgent == IntPtr.Zero) {
                 return;

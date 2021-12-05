@@ -17,7 +17,7 @@ namespace XivCommon.Functions.Housing {
         ///
         /// <returns>struct if player is in a housing ward, null otherwise</returns>
         /// </summary>
-        // Updated: 5.55
+        // Updated: 6.0
         // 48 89 5C 24 ?? 48 89 6C 24 ?? 48 89 74 24 ?? 57 41 56 41 57 48 83 EC 20 49 8B 00 (ward?)
         public unsafe RawHousingLocation? RawLocation {
             get {
