@@ -26,7 +26,7 @@ namespace XivCommon.Functions.FriendList {
                 var friendListAgent = (IntPtr) Framework.Instance()
                     ->GetUiModule()
                     ->GetAgentModule()
-                    ->GetAgentByInternalId(AgentId.FriendList);
+                    ->GetAgentByInternalId(AgentId.SocialFriendList);
                 if (friendListAgent == IntPtr.Zero) {
                     return Array.Empty<FriendListEntry>();
                 }
