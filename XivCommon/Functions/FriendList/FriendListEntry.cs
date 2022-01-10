@@ -18,16 +18,16 @@ namespace XivCommon.Functions.FriendList {
         public readonly ulong ContentId;
 
         /// <summary>
-        /// The home world of the friend.
-        /// </summary>
-        [FieldOffset(0x16)]
-        public readonly ushort HomeWorld;
-
-        /// <summary>
         /// The current world of the friend.
         /// </summary>
-        [FieldOffset(0x18)]
+        [FieldOffset(0x16)]
         public readonly ushort CurrentWorld;
+
+        /// <summary>
+        /// The home world of the friend.
+        /// </summary>
+        [FieldOffset(0x18)]
+        public readonly ushort HomeWorld;
 
         /// <summary>
         /// The job the friend is currently on.
