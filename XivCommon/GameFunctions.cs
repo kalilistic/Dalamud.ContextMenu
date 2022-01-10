@@ -102,7 +102,7 @@ namespace XivCommon {
             this.UiAlloc = new UiAlloc(scanner);
             this.Chat = new Chat(scanner);
             this.PartyFinder = new PartyFinder(scanner, partyFinderGui, hooks);
-            this.BattleTalk = new BattleTalk(scanner, hooks.HasFlag(Hooks.BattleTalk));
+            this.BattleTalk = new BattleTalk(hooks.HasFlag(Hooks.BattleTalk));
             this.Examine = new Examine(scanner);
             this.Talk = new Talk(scanner, hooks.HasFlag(Hooks.Talk));
             this.ChatBubbles = new ChatBubbles(objectTable, scanner, hooks.HasFlag(Hooks.ChatBubbles));
