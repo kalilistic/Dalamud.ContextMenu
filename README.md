@@ -1,4 +1,5 @@
 # Dalamud.ContextMenu
+[![Nuget](https://img.shields.io/nuget/v/Dalamud.ContextMenu)](https://www.nuget.org/packages/Dalamud.ContextMenu/)
 
 This is a library to add context menus to dalamud plugins. The logic is all copied from a deprecated version of annaclemens' XIVCommon library. This excludes sub menus and support for setting menu item order.
 
