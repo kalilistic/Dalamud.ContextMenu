@@ -49,21 +49,4 @@
 			<Private>False</Private>
 		</Reference>
 	</ItemGroup>
-	<ItemGroup>
-		<PackageReference Include="ILRepack" Version="2.0.18" GeneratePathProperty="true" />
-	</ItemGroup>
-	<Target Name="ILRepack" AfterTargets="Build">
-		<ItemGroup>
-			<InputAssemblies Include="$(TargetPath)" />
-			<InputAssemblies Include="$(TargetDir)*.dll" Exclude="$(TargetPath)" />
-		</ItemGroup>
-		<Exec Command="$(PkgILRepack)\tools\ILRepack.exe /union /lib:$(DalamudLibPath) /out:$(TargetDir)$(TargetFileName) @(InputAssemblies, ' ')" />
-	</Target>
-	<Target Name="CleanOutDir" AfterTargets="ILRepack">
-		<ItemGroup>
-			<DeleteAssemblies Include="$(TargetDir)*.dll" Exclude="$(TargetPath)" />
-		</ItemGroup>
-		<Message Text="Deleting @(DeleteAssemblies)" Importance="high" />
-		<Delete Files="@(DeleteAssemblies)" />
-	</Target>
 </Project>
