@@ -1,0 +1,69 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Title>Dalamud.ContextMenu</Title>
+		<Authors>kalilistic</Authors>
+		<Description>Dalamud context menu library copied from ascclemens' XIVCommons.</Description>
+		<RepositoryUrl>https://github.com/kalilistic/Dalamud.ContextMenu</RepositoryUrl>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageIcon>icon.png</PackageIcon>
+		<TargetFramework>net5.0-windows</TargetFramework>
+		<Platforms>x64</Platforms>
+		<LangVersion>10</LangVersion>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<Nullable>enable</Nullable>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+		<DalamudLibPath>$(appdata)\XIVLauncher\addon\Hooks\dev\</DalamudLibPath>
+		<NoWarn>IDE0003;CS8669;MSB3270</NoWarn>
+		<Version>1.0.0</Version>
+	</PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+		<DebugSymbols>true</DebugSymbols>
+		<DebugType>full</DebugType>
+		<Optimize>false</Optimize>
+		<OutputPath>bin\Debug\</OutputPath>
+		<DefineConstants>DEBUG;TRACE</DefineConstants>
+		<ErrorReport>prompt</ErrorReport>
+		<WarningLevel>4</WarningLevel>
+	</PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+		<DebugType>pdbonly</DebugType>
+		<Optimize>true</Optimize>
+		<OutputPath>bin\Release\</OutputPath>
+		<DefineConstants>TRACE</DefineConstants>
+		<ErrorReport>prompt</ErrorReport>
+		<WarningLevel>4</WarningLevel>
+	</PropertyGroup>
+	<ItemGroup>
+		<None Include="..\..\assets\icon.png" Pack="true" PackagePath="" />
+	</ItemGroup>
+	<ItemGroup>
+		<Reference Include="Dalamud">
+			<HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\Dalamud.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="FFXIVClientStructs">
+			<HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\FFXIVClientStructs.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="ILRepack" Version="2.0.18" GeneratePathProperty="true" />
+	</ItemGroup>
+	<Target Name="ILRepack" AfterTargets="Build">
+		<ItemGroup>
+			<InputAssemblies Include="$(TargetPath)" />
+			<InputAssemblies Include="$(TargetDir)*.dll" Exclude="$(TargetPath)" />
+		</ItemGroup>
+		<Exec Command="$(PkgILRepack)\tools\ILRepack.exe /union /lib:$(DalamudLibPath) /out:$(TargetDir)$(TargetFileName) @(InputAssemblies, ' ')" />
+	</Target>
+	<Target Name="CleanOutDir" AfterTargets="ILRepack">
+		<ItemGroup>
+			<DeleteAssemblies Include="$(TargetDir)*.dll" Exclude="$(TargetPath)" />
+		</ItemGroup>
+		<Message Text="Deleting @(DeleteAssemblies)" Importance="high" />
+		<Delete Files="@(DeleteAssemblies)" />
+	</Target>
+</Project>
