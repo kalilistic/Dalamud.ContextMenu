@@ -3,6 +3,10 @@
 // Suppress stylecop rules to avoid fixing all these warnings right now.
 // </auto-generated>
 //------------------------------------------------------------------------------
+
+using Dalamud.Game.Text;
+using Dalamud.Game.Text.SeStringHandling.Payloads;
+
 namespace Dalamud.ContextMenu;
 
 using System;
@@ -45,12 +49,20 @@ public abstract class CustomContextMenuItem<T> : BaseContextMenuItem
     /// </summary>
     /// <param name="name">the English name of the item, copied to other languages</param>
     /// <param name="action">the action to perform on click</param>
-    internal CustomContextMenuItem(SeString name, T action) {
+    /// <param name="useDalamudIndicator">append the dalamud indicator (red D) to the name.</param>
+    internal CustomContextMenuItem(SeString name, T action, bool useDalamudIndicator)
+    {
+        if (useDalamudIndicator) name = AddDalamudIndicator(name);
         this.NameEnglish = name;
         this.NameJapanese = name;
         this.NameFrench = name;
         this.NameGerman = name;
-
         this.Action = action;
+    }
+
+    private SeString AddDalamudIndicator(SeString name)
+    {
+        return new SeString().Append(new UIForegroundPayload(539)).Append($"{SeIconChar.BoxedLetterD.ToIconString()} ")
+            .Append(new UIForegroundPayload(0)).Append(name);
     }
 }

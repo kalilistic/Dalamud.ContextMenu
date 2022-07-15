@@ -16,6 +16,7 @@ public class InventoryContextMenuItem : CustomContextMenuItem<Dalamud.ContextMen
     /// </summary>
     /// <param name="name">the English name of the item, copied to other languages</param>
     /// <param name="action">the action to perform on click</param>
-    public InventoryContextMenuItem(SeString name, Dalamud.ContextMenu.ContextMenu.InventoryContextMenuItemSelectedDelegate action) : base(name, action) {
+    /// <param name="useDalamudIndicator">append the dalamud indicator (red D) to the name.</param>
+    public InventoryContextMenuItem(SeString name, Dalamud.ContextMenu.ContextMenu.InventoryContextMenuItemSelectedDelegate action, bool useDalamudIndicator) : base(name, action, useDalamudIndicator) {
     }
 }
