@@ -3,6 +3,7 @@
 // Suppress stylecop rules to avoid fixing all these warnings right now.
 // </auto-generated>
 //------------------------------------------------------------------------------
+#pragma warning disable CS0618
 namespace Dalamud.ContextMenu;
 
 using System;
@@ -156,14 +157,14 @@ public class ContextMenu : IDisposable {
 
     private readonly AtkValueSetStringDelegate _atkValueSetString = null!;
 
-    private GameFunctions Functions { get; }
+    private DalamudContextMenu DalamudContextMenu { get; }
     private ClientLanguage Language { get; }
     private IntPtr Agent { get; set; } = IntPtr.Zero;
     private List<BaseContextMenuItem> Items { get; } = new();
     private int NormalSize { get; set; }
 
-    internal ContextMenu(GameFunctions functions, SigScanner scanner, ClientLanguage language) {
-        this.Functions = functions;
+    internal ContextMenu(DalamudContextMenu dalamudContextMenu, SigScanner scanner, ClientLanguage language) {
+        this.DalamudContextMenu = dalamudContextMenu;
         this.Language = language;
 
         if (scanner.TryScanText(Signatures.AtkValueChangeType, out var changeTypePtr, "Context Menu (change type)")) {
@@ -328,7 +329,7 @@ public class ContextMenu : IDisposable {
 
         // reallocate
         var size = (ulong) sizeof(AtkValue) * newItemCount + 8;
-        var newArray = this.Functions.UiAlloc.Alloc(size);
+        var newArray = this.DalamudContextMenu.UiAlloc.Alloc(size);
         // zero new memory
         Marshal.Copy(new byte[size], 0, newArray, (int) size);
         // update size and pointer
@@ -339,7 +340,7 @@ public class ContextMenu : IDisposable {
         // copy old memory if existing
         if (oldArray != null) {
             Buffer.MemoryCopy(oldArray, (void*) (newArray + 8), size, (ulong) sizeof(AtkValue) * oldArrayItemCount);
-            this.Functions.UiAlloc.Free((IntPtr) oldArray - 8);
+            this.DalamudContextMenu.UiAlloc.Free((IntPtr) oldArray - 8);
         }
 
         return (AtkValue*) (newArray + 8);
@@ -624,7 +625,7 @@ public class ContextMenu : IDisposable {
             return;
         }
 
-        this.Functions.UiAlloc.Free(this.SubMenuTitle);
+        this.DalamudContextMenu.UiAlloc.Free(this.SubMenuTitle);
         this.SubMenuTitle = IntPtr.Zero;
     }
 
@@ -658,7 +659,7 @@ public class ContextMenu : IDisposable {
 
         // step 2 (see SetUpContextSubMenu)
         var nameBytes = name.Encode().Terminate();
-        this.SubMenuTitle = this.Functions.UiAlloc.Alloc((ulong) nameBytes.Length);
+        this.SubMenuTitle = this.DalamudContextMenu.UiAlloc.Alloc((ulong) nameBytes.Length);
         Marshal.Copy(nameBytes, 0, this.SubMenuTitle, nameBytes.Length);
         var v10 = agent + 0x678 * *(byte*) (agent + 0x1740) + 0x28;
         *(byte**) (v10 + 0x668) = (byte*) this.SubMenuTitle;

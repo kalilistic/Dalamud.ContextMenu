@@ -3,17 +3,18 @@
 // Suppress stylecop rules to avoid fixing all these warnings right now.
 // </auto-generated>
 //------------------------------------------------------------------------------
-namespace Dalamud.ContextMenu;
 
-using System;
 using Dalamud.Game;
 using Dalamud.Game.ClientState;
 using Dalamud.Game.Gui;
+namespace Dalamud.ContextMenu;
+
+using System;
 
 /// <summary>
-/// A class containing game functions
+/// A base class for accessing DalamudContextMenu functionality.
 /// </summary>
-public class GameFunctions : IDisposable {
+public class DalamudContextMenu : IDisposable {
     private GameGui GameGui { get; }
 
     private Dalamud.Game.Framework Framework { get; }
@@ -25,7 +26,15 @@ public class GameFunctions : IDisposable {
     /// </summary>
     public ContextMenu ContextMenu { get; }
 
-    internal GameFunctions() {
+    /// <summary>
+    /// <para>
+    /// Construct a new Dalamud.ContextMenu base.
+    /// </para>
+    /// <para>
+    /// This will automatically enable hooks based on the hooks parameter.
+    /// </para>
+    /// </summary>
+    public DalamudContextMenu() {
         this.Framework = Util.GetService<Dalamud.Game.Framework>();
         this.GameGui = Util.GetService<GameGui>();
 
