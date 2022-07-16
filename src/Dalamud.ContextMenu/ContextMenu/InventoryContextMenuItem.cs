@@ -10,13 +10,13 @@ using Dalamud.Game.Text.SeStringHandling;
 /// <summary>
 /// A custom context menu item for inventory items.
 /// </summary>
-public class InventoryContextMenuItem : CustomContextMenuItem<Dalamud.ContextMenu.ContextMenu.InventoryContextMenuItemSelectedDelegate> {
+public class InventoryContextMenuItem : CustomContextMenuItem<DalamudContextMenu.InventoryContextMenuItemSelectedDelegate> {
     /// <summary>
     /// Create a new context menu item for inventory items.
     /// </summary>
     /// <param name="name">the English name of the item, copied to other languages</param>
     /// <param name="action">the action to perform on click</param>
     /// <param name="useDalamudIndicator">append the dalamud indicator (red D) to the name.</param>
-    public InventoryContextMenuItem(SeString name, Dalamud.ContextMenu.ContextMenu.InventoryContextMenuItemSelectedDelegate action, bool useDalamudIndicator) : base(name, action, useDalamudIndicator) {
+    public InventoryContextMenuItem(SeString name, DalamudContextMenu.InventoryContextMenuItemSelectedDelegate action, bool useDalamudIndicator) : base(name, action, useDalamudIndicator) {
     }
 }
