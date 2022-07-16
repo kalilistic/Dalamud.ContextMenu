@@ -1,38 +1,49 @@
 # Dalamud.ContextMenu
 [![Nuget](https://img.shields.io/nuget/v/Dalamud.ContextMenu)](https://www.nuget.org/packages/Dalamud.ContextMenu/)
 
-This is a library to add context menus to dalamud plugins. The logic is all copied from a deprecated version of annaclemens' XIVCommon library. This excludes sub menus and support for setting menu item order.
+This is a library to add context menus to dalamud plugins.
 
-This will be deprecated when any signatures break or when dalamud adds native context menu support.
+### Features
+- Add context menu items to game objects (e.g. players).
+- Add context menu items to inventory items.
+- Add an dalamud indicator icon so players know a plugin is adding the menu item (optional).
+
+### Limitations
+- No sub menus.
+- No random inserts - all custom items are added to the end of the menu.
+
+
+### Credits
+- The logic is all copied from a deprecated version of annaclemens' XIVCommon library.
+
+### Example
 
 ```csharp
-GameObjectContextMenuItem gameObjectContextMenuItem;
-InventoryContextMenuItem inventoryContextMenuItem;
-        
-ContextMenu.OnGameObjectContextMenuOpened += OnOpenGameObjectContextMenu;
-ContextMenu.OnInventoryContextMenuOpened += OnOpenInventoryContextMenu;
+// create instance
+DalamudContextMenu contextMenu = new DalamudContextMenu();
 
-private void OnOpenGameObjectContextMenu(GameObjectContextMenuOpenArgs args)
+// create context menu item
+GameObjectContextMenuItem contextMenuItem = new GameObjectContextMenuItem(
+    new SeString(new TextPayload("My Menu Item"), // text
+    MyMenuItemAction, // action to invoke
+    true); // use dalamud indicator
+
+// add event handler
+contextMenu.OnOpenGameObjectContextMenu += OpenGameObjectContextMenu;
+
+// add custom item on game object menu open
+private void OpenGameObjectContextMenu(GameObjectContextMenuOpenArgs args)
 {
-	PluginLog.Log("OnOpenGameObjectContextMenu");
-	args.AddCustomItem(gameObjectContextMenuItem);
+    args.AddCustomItem(contextMenuItem);
 }
 
-private void OnOpenGameObjectContextMenuItem(GameObjectContextMenuItemSelectedArgs args)
+// add action method when custom item is clicked
+private void MyMenuItemAction(GameObjectContextMenuItemSelectedArgs args)
 {
-	PluginLog.Log("OnOpenGameObjectContextMenuItem");
-	PluginLog.Log($"{args.ObjectId} / {args.ObjectWorld}");
+    // do something
 }
 
-private void OnOpenInventoryContextMenu(InventoryContextMenuOpenArgs args)
-{
-	PluginLog.Log("OnOpenInventoryContextMenu");
-	args.AddCustomItem(inventoryContextMenuItem);
-}
-
-private void OnOpenInventoryContextMenuItem(InventoryContextMenuItemSelectedArgs args)
-{
-	PluginLog.Log("OnOpenInventoryContextMenuItem");
-	PluginLog.Log($"{args.ItemId} / {args.ItemHq}");
-}
+// dispose
+contextMenu.OnOpenGameObjectContextMenu -= OpenGameObjectContextMenu;
+contextMenu.Dispose();
 ```
