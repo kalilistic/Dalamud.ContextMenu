@@ -17,6 +17,6 @@ public class GameObjectContextMenuItem : CustomContextMenuItem<DalamudContextMen
     /// <param name="name">the English name of the item, copied to other languages</param>
     /// <param name="action">the action to perform on click</param>
     /// <param name="useDalamudIndicator">append the dalamud indicator (red D) to the name.</param>
-    public GameObjectContextMenuItem(SeString name, DalamudContextMenu.GameObjectContextMenuItemSelectedDelegate action, bool useDalamudIndicator) : base(name, action, useDalamudIndicator) {
+    public GameObjectContextMenuItem(SeString name, DalamudContextMenu.GameObjectContextMenuItemSelectedDelegate action, bool useDalamudIndicator = false) : base(name, action, useDalamudIndicator) {
     }
 }
