@@ -325,7 +325,6 @@ public class DalamudContextMenu : IDisposable {
         return (itemId, itemAmount, itemHq);
     }
 
-    [HandleProcessCorruptedStateExceptions]
     private unsafe byte OpenMenuDetour(IntPtr addon, int menuSize, AtkValue* atkValueArgs) {
         try {
             this.OpenMenuDetourInner(addon, ref menuSize, ref atkValueArgs);
