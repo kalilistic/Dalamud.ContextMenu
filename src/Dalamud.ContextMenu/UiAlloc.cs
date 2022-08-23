@@ -11,7 +11,7 @@ using Dalamud.Game;
 
 internal class UiAlloc {
     private static class Signatures {
-        internal const string GameAlloc = "E8 ?? ?? ?? ?? 49 83 CF FF 4C 8B F0";
+        internal const string GameAlloc = "E8 ?? ?? ?? ?? 49 83 CC FF 4C 8B F0";
         internal const string GameFree = "E8 ?? ?? ?? ?? 4C 89 7B 60";
         internal const string GetGameAllocator = "E8 ?? ?? ?? ?? 8B 75 08";
     }
