@@ -10,6 +10,7 @@ using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using Dalamud.Data;
 using Dalamud.Game;
 using Dalamud.Game.ClientState;
 using Dalamud.Game.Gui;
@@ -17,6 +18,7 @@ using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Hooking;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using Lumina.Excel.GeneratedSheets;
 using Framework = FFXIVClientStructs.FFXIV.Client.System.Framework.Framework;
 using GUIValueType = FFXIVClientStructs.FFXIV.Component.GUI.ValueType;
 #pragma warning disable CS0618
@@ -325,6 +327,67 @@ public class DalamudContextMenu : IDisposable {
         return (itemId, itemAmount, itemHq);
     }
 
+    private static unsafe (uint objectId, uint contentIdLower, SeString? text, ushort objectWorld) GetBlacklistInfo() {
+        var objectId = 0xE0000000;
+        var contentIdLower = 0u;
+        (uint objectId, uint contentIdLower, SeString text, ushort objectWorld) ret = (objectId, contentIdLower, null, 0);
+
+        var blackListAddon = (AtkUnitBase*)Util.GetService<GameGui>().GetAddonByName("BlackList");
+        if (blackListAddon == null) {
+            return ret;
+        }
+
+        var list = (AtkComponentNode*)blackListAddon->UldManager.SearchNodeById(6);
+        if (list == null) {
+            return ret;
+        }
+
+        var currRenderer = (AtkComponentNode*)list->Component->UldManager.SearchNodeById(5);
+        if (currRenderer == null) {
+            return ret;
+        }
+
+        AtkComponentNode* selectedRenderer = null;
+        for (var i = 0; i < 20; i++) {
+            var currNineGridNode = currRenderer->Component->UldManager.SearchNodeById(5);
+            if (currNineGridNode == null) {
+                break;
+            }
+
+            if (currNineGridNode->Color.A == 0xFF) {
+                selectedRenderer = currRenderer;
+                break;
+            }
+
+            var nextResRenderer = currRenderer->AtkResNode.NextSiblingNode;
+            // 1006 == ListItemRenderer Component Node type
+            if (nextResRenderer == null || nextResRenderer->Type != (NodeType)1006) {
+                break;
+            }
+
+            currRenderer = (AtkComponentNode*)nextResRenderer;
+        }
+
+        if (selectedRenderer == null) {
+            return ret;
+        }
+
+        var playerNameNode = (AtkTextNode*)selectedRenderer->Component->UldManager.SearchNodeById(2);
+        var worldNameNode = (AtkTextNode*)selectedRenderer->Component->UldManager.SearchNodeById(3);
+        if (playerNameNode == null || worldNameNode == null) {
+            return ret;
+        }
+
+        ret.text = $"{playerNameNode->NodeText}";
+        var worldName = Util.GetService<DataManager>().GetExcelSheet<World>()
+            ?.FirstOrDefault(world => world.Name == worldNameNode->NodeText.ToString());
+        if (worldName != null) {
+            ret.objectWorld = (ushort)worldName.RowId;
+        }
+
+        return ret;
+    }
+
     private unsafe byte OpenMenuDetour(IntPtr addon, int menuSize, AtkValue* atkValueArgs) {
         try {
             this.OpenMenuDetourInner(addon, ref menuSize, ref atkValueArgs);
@@ -510,7 +573,7 @@ public class DalamudContextMenu : IDisposable {
 
             this.Items.AddRange(args.Items);
         } else {
-            var info = this.GetAgentInfo(agent);
+            var info = parentAddonName != "BlackList" ? this.GetAgentInfo(agent) : GetBlacklistInfo();
 
             var args = new GameObjectContextMenuOpenArgs(
                 addon,
@@ -590,7 +653,7 @@ public class DalamudContextMenu : IDisposable {
         switch (item) {
             case GameObjectContextMenuItem custom: {
                 var addonName = this.GetParentAddonName(addon);
-                var info = this.GetAgentInfo(custom.Agent);
+                var info = addonName != "BlackList" ? this.GetAgentInfo(custom.Agent) : GetBlacklistInfo();
 
                 var args = new GameObjectContextMenuItemSelectedArgs(
                     addon,
