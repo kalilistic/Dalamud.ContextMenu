@@ -16,6 +16,10 @@ This is a library to add context menus to dalamud plugins.
 ### Credits
 - The logic is all copied from a deprecated version of annaclemens' XIVCommon library.
 
+### How to Use
+- Import from nuget.
+- Add ```<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>``` in your csproj file.
+
 ### Example
 
 ```csharp
