@@ -77,14 +77,14 @@ public class DalamudContextMenu : IDisposable {
     /// </summary>
     private const int InventoryMenuActionsOffset = 0x558;
 
-    private const int ObjectIdOffset = 0xEF0;
-    private const int ContentIdLowerOffset = 0xEE0;
-    private const int TextPointerOffset = 0xE08;
-    private const int WorldOffset = 0xF00;
+    private const int ObjectIdOffset = 0xEF8;
+    private const int ContentIdLowerOffset = 0xEE8;
+    private const int TextPointerOffset = 0xE10;
+    private const int WorldOffset = 0xF08;
 
-    private const int ItemIdOffset = 0x5F8;
-    private const int ItemAmountOffset = 0x5FC;
-    private const int ItemHqOffset = 0x604;
+    private const int ItemIdOffset = 0x6F8;
+    private const int ItemAmountOffset = 0x6FC;
+    private const int ItemHqOffset = 0x704;
 
     // Found in the first function in the agent's vtable
     private const byte NoopContextId = 0x67;
