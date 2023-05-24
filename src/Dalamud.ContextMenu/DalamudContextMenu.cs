@@ -31,7 +31,7 @@ using System;
 /// A base class for accessing DalamudContextMenu functionality.
 /// </summary>
 public class DalamudContextMenu : IDisposable {
-    
+
         private static class Signatures {
         internal const string SomeOpenAddonThing = "E8 ?? ?? ?? ?? 0F B7 C0 48 83 C4 60";
         internal const string ContextMenuOpen = "48 8B C4 57 41 56 41 57 48 81 EC";
@@ -52,31 +52,33 @@ public class DalamudContextMenu : IDisposable {
     /// </summary>
     private const int ParentAddonIdOffset = 0x1D2;
 
+    // Found in E8 ?? ?? ?? ?? 4D 8B C6 48 8B D3 48 8B CF in 6.4
     private const int AddonArraySizeOffset = 0x1CA;
     private const int AddonArrayOffset = 0x160;
 
     private const int ContextMenuItemOffset = 7;
 
     /// <summary>
-    /// Offset from agent to actions byte array pointer (have to add the actions offset after)
+    /// Offset from agent to actions byte array pointer (have to add the actions offset after) (in AgentContext_ReceiveEvent)
     /// </summary>
     private const int MenuActionsPointerOffset = 0xD18;
 
     /// <summary>
-    /// SetUpContextSubMenu checks this
+    /// AgentContext_OpenSubMenu checks this
     /// </summary>
     private const int BooleanOffsetCheck = 0x690;
 
     /// <summary>
-    /// Offset from [MenuActionsPointer] to actions byte array
+    /// Offset from [MenuActionsPointer] to actions byte array (in AgentContext_ReceiveEvent)
     /// </summary>
     private const int MenuActionsOffset = 0x428;
 
     /// <summary>
-    /// Offset from inventory context agent to actions byte array
+    /// Offset from inventory context agent to actions byte array (in AgentInventoryContext_ReceiveEvent)
     /// </summary>
-    private const int InventoryMenuActionsOffset = 0x558;
+    private const int InventoryMenuActionsOffset = 0x658;
 
+    // Just bruteforce to find these offsets
     private const int ObjectIdOffset = 0xEF8;
     private const int ContentIdLowerOffset = 0xEE8;
     private const int TextPointerOffset = 0xE10;
@@ -86,14 +88,14 @@ public class DalamudContextMenu : IDisposable {
     private const int ItemAmountOffset = 0x6FC;
     private const int ItemHqOffset = 0x704;
 
-    // Found in the first function in the agent's vtable
-    private const byte NoopContextId = 0x67;
+    // Found in AgentContext_ReceiveEvent and AgentInventoryContext_ReceiveEvent, these are the cases
+    private const byte NoopContextId = 0x6A;
     private const byte InventoryNoopContextId = 0xFF;
-    private const byte ContextSubId = 0x66;
+    private const byte ContextSubId = 0x69;
     private const byte InventoryContextSubId = 0x30;
 
     #endregion
-    
+
     /// <summary>
     /// The delegate for context menu events.
     /// </summary>
@@ -129,7 +131,7 @@ public class DalamudContextMenu : IDisposable {
     /// The delegate that is run when an inventory context menu item is selected.
     /// </summary>
     public delegate void InventoryContextMenuItemSelectedDelegate(InventoryContextMenuItemSelectedArgs args);
-    
+
     private delegate IntPtr SomeOpenAddonThingDelegate(IntPtr a1, IntPtr a2, IntPtr a3, uint a4, IntPtr a5, IntPtr a6, IntPtr a7, ushort a8);
 
     private Hook<SomeOpenAddonThingDelegate>? SomeOpenAddonThingHook { get; }
@@ -162,12 +164,12 @@ public class DalamudContextMenu : IDisposable {
     private unsafe delegate void AtkValueSetStringDelegate(AtkValue* thisPtr, byte* bytes);
 
     private readonly AtkValueSetStringDelegate _atkValueSetString = null!;
-    
+
     private ClientLanguage Language { get; }
     private IntPtr Agent { get; set; } = IntPtr.Zero;
     private List<BaseContextMenuItem> Items { get; } = new();
     private int NormalSize { get; set; }
-    
+
     private GameGui GameGui { get; }
 
     internal UiAlloc UiAlloc { get; }
@@ -253,7 +255,7 @@ public class DalamudContextMenu : IDisposable {
         this.ContextMenuEvent66Hook?.Dispose();
         this.InventoryContextMenuEvent30Hook?.Dispose();
     }
-    
+
       private IntPtr SomeOpenAddonThingDetour(IntPtr a1, IntPtr a2, IntPtr a3, uint a4, IntPtr a5, IntPtr a6, IntPtr a7, ushort a8) {
         this.Agent = a6;
         return this.SomeOpenAddonThingHook!.Original(a1, a2, a3, a4, a5, a6, a7, a8);
@@ -751,7 +753,7 @@ public class DalamudContextMenu : IDisposable {
 
         var secondaryArgsPtr = Marshal.ReadIntPtr(agent + MenuActionsPointerOffset);
         var submenuArgs = (AtkValue*) (secondaryArgsPtr + 8);
-            
+
         var booleanOffset = *(long*) (agent + *(byte*) (agent + 0x1740) * 0x678 + 0x690) != 0 ? 1 : 0;
 
         for (var i = 0; i < this.Items.Count; i++) {
