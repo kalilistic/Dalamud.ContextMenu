@@ -211,7 +211,7 @@ public class DalamudContextMenu : IDisposable {
         }
 
         if (Service.Scanner.TryScanText(Signatures.SomeOpenAddonThing, out var thingPtr, "Context Menu (some OpenAddon thing)")) {
-            this.SomeOpenAddonThingHook = Hook<SomeOpenAddonThingDelegate>.FromAddress(thingPtr, this.SomeOpenAddonThingDetour);
+            this.SomeOpenAddonThingHook = Service.GameInteropProvider.HookFromAddress<SomeOpenAddonThingDelegate>(thingPtr, this.SomeOpenAddonThingDetour);
             this.SomeOpenAddonThingHook.Enable();
         } else {
             return;
@@ -219,7 +219,7 @@ public class DalamudContextMenu : IDisposable {
 
         if (Service.Scanner.TryScanText(Signatures.ContextMenuOpen, out var openPtr, "Context Menu open")) {
             unsafe {
-                this.ContextMenuOpenHook = Hook<ContextMenuOpenDelegate>.FromAddress(openPtr, this.OpenMenuDetour);
+                this.ContextMenuOpenHook = Service.GameInteropProvider.HookFromAddress<ContextMenuOpenDelegate>(openPtr, this.OpenMenuDetour);
             }
 
             this.ContextMenuOpenHook.Enable();
@@ -228,20 +228,20 @@ public class DalamudContextMenu : IDisposable {
         }
 
         if (Service.Scanner.TryScanText(Signatures.ContextMenuSelected, out var selectedPtr, "Context Menu selected")) {
-            this.ContextMenuItemSelectedHook = Hook<ContextMenuItemSelectedInternalDelegate>.FromAddress(selectedPtr, this.ItemSelectedDetour);
+            this.ContextMenuItemSelectedHook = Service.GameInteropProvider.HookFromAddress<ContextMenuItemSelectedInternalDelegate>(selectedPtr, this.ItemSelectedDetour);
             this.ContextMenuItemSelectedHook.Enable();
         }
 
         if (Service.Scanner.TryScanText(Signatures.TitleContextMenuOpen, out var titleOpenPtr, "Context Menu (title menu open)")) {
             unsafe {
-                this.TitleContextMenuOpenHook = Hook<ContextMenuOpenDelegate>.FromAddress(titleOpenPtr, this.TitleContextMenuOpenDetour);
+                this.TitleContextMenuOpenHook = Service.GameInteropProvider.HookFromAddress<ContextMenuOpenDelegate>(titleOpenPtr, this.TitleContextMenuOpenDetour);
             }
 
             this.TitleContextMenuOpenHook.Enable();
         }
 
         if (Service.Scanner.TryScanText(Signatures.ContextMenuEvent66, out var event66Ptr, "Context Menu (event 66)")) {
-            this.ContextMenuEvent66Hook = Hook<ContextMenuEvent66Delegate>.FromAddress(event66Ptr, this.ContextMenuEvent66Detour);
+            this.ContextMenuEvent66Hook = Service.GameInteropProvider.HookFromAddress<ContextMenuEvent66Delegate>(event66Ptr, this.ContextMenuEvent66Detour);
             this.ContextMenuEvent66Hook.Enable();
         }
     }

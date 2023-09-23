@@ -23,4 +23,7 @@ internal class Service
     
     [PluginService]
     public static ISigScanner Scanner { get; private set; } = null!;
+    
+    [PluginService]
+    public static IGameInteropProvider GameInteropProvider { get; private set; } = null!;
 }
