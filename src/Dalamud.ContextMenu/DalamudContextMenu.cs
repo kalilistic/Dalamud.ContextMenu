@@ -16,6 +16,10 @@ using Dalamud.Game.ClientState;
 using Dalamud.Game.Gui;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Hooking;
+using Dalamud.IoC;
+using Dalamud.Logging;
+using Dalamud.Plugin;
+using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Lumina.Excel.GeneratedSheets;
@@ -170,8 +174,6 @@ public class DalamudContextMenu : IDisposable {
     private List<BaseContextMenuItem> Items { get; } = new();
     private int NormalSize { get; set; }
 
-    private GameGui GameGui { get; }
-
     internal UiAlloc UiAlloc { get; }
 
     /// <summary>
@@ -182,44 +184,42 @@ public class DalamudContextMenu : IDisposable {
     /// This will automatically enable hooks based on the hooks parameter.
     /// </para>
     /// </summary>
-    public DalamudContextMenu() {
-        this.GameGui = Util.GetService<GameGui>();
+    public DalamudContextMenu(DalamudPluginInterface pluginInterface)
+    {
+        pluginInterface.Create<Service>();
 
-        var clientState = Util.GetService<ClientState>();
-        var scanner = Util.GetService<SigScanner>();
+        this.UiAlloc = new UiAlloc(Service.Scanner);
 
-        this.UiAlloc = new UiAlloc(scanner);
+        this.Language = Service.ClientState.ClientLanguage;
 
-        this.Language = clientState.ClientLanguage;
-
-        if (scanner.TryScanText(Signatures.AtkValueChangeType, out var changeTypePtr, "Context Menu (change type)")) {
+        if (Service.Scanner.TryScanText(Signatures.AtkValueChangeType, out var changeTypePtr, "Context Menu (change type)")) {
             this._atkValueChangeType = Marshal.GetDelegateForFunctionPointer<AtkValueChangeTypeDelegate>(changeTypePtr);
         } else {
             return;
         }
 
-        if (scanner.TryScanText(Signatures.AtkValueSetString, out var setStringPtr, "Context Menu (set string)")) {
+        if (Service.Scanner.TryScanText(Signatures.AtkValueSetString, out var setStringPtr, "Context Menu (set string)")) {
             this._atkValueSetString = Marshal.GetDelegateForFunctionPointer<AtkValueSetStringDelegate>(setStringPtr);
         } else {
             return;
         }
 
-        if (scanner.TryScanText(Signatures.GetAddonByInternalId, out var getAddonPtr, "Context Menu (get addon)")) {
+        if (Service.Scanner.TryScanText(Signatures.GetAddonByInternalId, out var getAddonPtr, "Context Menu (get addon)")) {
             this._getAddonByInternalId = Marshal.GetDelegateForFunctionPointer<GetAddonByInternalIdDelegate>(getAddonPtr);
         } else {
             return;
         }
 
-        if (scanner.TryScanText(Signatures.SomeOpenAddonThing, out var thingPtr, "Context Menu (some OpenAddon thing)")) {
-            this.SomeOpenAddonThingHook = new Hook<SomeOpenAddonThingDelegate>(thingPtr, this.SomeOpenAddonThingDetour);
+        if (Service.Scanner.TryScanText(Signatures.SomeOpenAddonThing, out var thingPtr, "Context Menu (some OpenAddon thing)")) {
+            this.SomeOpenAddonThingHook = Hook<SomeOpenAddonThingDelegate>.FromAddress(thingPtr, this.SomeOpenAddonThingDetour);
             this.SomeOpenAddonThingHook.Enable();
         } else {
             return;
         }
 
-        if (scanner.TryScanText(Signatures.ContextMenuOpen, out var openPtr, "Context Menu open")) {
+        if (Service.Scanner.TryScanText(Signatures.ContextMenuOpen, out var openPtr, "Context Menu open")) {
             unsafe {
-                this.ContextMenuOpenHook = new Hook<ContextMenuOpenDelegate>(openPtr, this.OpenMenuDetour);
+                this.ContextMenuOpenHook = Hook<ContextMenuOpenDelegate>.FromAddress(openPtr, this.OpenMenuDetour);
             }
 
             this.ContextMenuOpenHook.Enable();
@@ -227,21 +227,21 @@ public class DalamudContextMenu : IDisposable {
             return;
         }
 
-        if (scanner.TryScanText(Signatures.ContextMenuSelected, out var selectedPtr, "Context Menu selected")) {
-            this.ContextMenuItemSelectedHook = new Hook<ContextMenuItemSelectedInternalDelegate>(selectedPtr, this.ItemSelectedDetour);
+        if (Service.Scanner.TryScanText(Signatures.ContextMenuSelected, out var selectedPtr, "Context Menu selected")) {
+            this.ContextMenuItemSelectedHook = Hook<ContextMenuItemSelectedInternalDelegate>.FromAddress(selectedPtr, this.ItemSelectedDetour);
             this.ContextMenuItemSelectedHook.Enable();
         }
 
-        if (scanner.TryScanText(Signatures.TitleContextMenuOpen, out var titleOpenPtr, "Context Menu (title menu open)")) {
+        if (Service.Scanner.TryScanText(Signatures.TitleContextMenuOpen, out var titleOpenPtr, "Context Menu (title menu open)")) {
             unsafe {
-                this.TitleContextMenuOpenHook = new Hook<ContextMenuOpenDelegate>(titleOpenPtr, this.TitleContextMenuOpenDetour);
+                this.TitleContextMenuOpenHook = Hook<ContextMenuOpenDelegate>.FromAddress(titleOpenPtr, this.TitleContextMenuOpenDetour);
             }
 
             this.TitleContextMenuOpenHook.Enable();
         }
 
-        if (scanner.TryScanText(Signatures.ContextMenuEvent66, out var event66Ptr, "Context Menu (event 66)")) {
-            this.ContextMenuEvent66Hook = new Hook<ContextMenuEvent66Delegate>(event66Ptr, this.ContextMenuEvent66Detour);
+        if (Service.Scanner.TryScanText(Signatures.ContextMenuEvent66, out var event66Ptr, "Context Menu (event 66)")) {
+            this.ContextMenuEvent66Hook = Hook<ContextMenuEvent66Delegate>.FromAddress(event66Ptr, this.ContextMenuEvent66Detour);
             this.ContextMenuEvent66Hook.Enable();
         }
     }
@@ -329,12 +329,12 @@ public class DalamudContextMenu : IDisposable {
         return (itemId, itemAmount, itemHq);
     }
 
-    private static unsafe (uint objectId, uint contentIdLower, SeString? text, ushort objectWorld) GetBlacklistInfo() {
+    private unsafe (uint objectId, uint contentIdLower, SeString? text, ushort objectWorld) GetBlacklistInfo() {
         var objectId = 0xE0000000;
         var contentIdLower = 0u;
         (uint objectId, uint contentIdLower, SeString text, ushort objectWorld) ret = (objectId, contentIdLower, null, 0);
 
-        var blackListAddon = (AtkUnitBase*)Util.GetService<GameGui>().GetAddonByName("BlackList");
+        var blackListAddon = (AtkUnitBase*)Service.GameGui.GetAddonByName("BlackList");
         if (blackListAddon == null) {
             return ret;
         }
@@ -381,7 +381,7 @@ public class DalamudContextMenu : IDisposable {
         }
 
         ret.text = $"{playerNameNode->NodeText}";
-        var worldName = Util.GetService<DataManager>().GetExcelSheet<World>()
+        var worldName = Service.DataManager.GetExcelSheet<World>()
             ?.FirstOrDefault(world => world.Name == worldNameNode->NodeText.ToString());
         if (worldName != null) {
             ret.objectWorld = (ushort)worldName.RowId;
@@ -394,7 +394,7 @@ public class DalamudContextMenu : IDisposable {
         try {
             this.OpenMenuDetourInner(addon, ref menuSize, ref atkValueArgs);
         } catch (Exception ex) {
-            Logger.LogError(ex, "Exception in OpenMenuDetour");
+            Service.Logger.Error(ex, "Exception in OpenMenuDetour");
         }
 
         return this.ContextMenuOpenHook!.Original(addon, menuSize, atkValueArgs);
@@ -557,7 +557,7 @@ public class DalamudContextMenu : IDisposable {
             try {
                 inventoryAction?.Invoke(args);
             } catch (Exception ex) {
-                Logger.LogError(ex, "Exception in OpenMenuDetour");
+                Service.Logger.Error(ex, "Exception in OpenMenuDetour");
                 return true;
             }
 
@@ -593,7 +593,7 @@ public class DalamudContextMenu : IDisposable {
             try {
                 normalAction?.Invoke(args);
             } catch (Exception ex) {
-                Logger.LogError(ex, "Exception in OpenMenuDetour");
+                Service.Logger.Error(ex, "Exception in OpenMenuDetour");
                 return true;
             }
 
@@ -615,7 +615,7 @@ public class DalamudContextMenu : IDisposable {
         if (this.Items.Count > MaxItems) {
             var toRemove = this.Items.Count - MaxItems;
             this.Items.RemoveRange(MaxItems, toRemove);
-            Logger.LogWarning($"Context menu item limit ({MaxItems}) exceeded. Removing {toRemove} item(s).");
+            Service.Logger.Warning($"Context menu item limit ({MaxItems}) exceeded. Removing {toRemove} item(s).");
         }
 
         return false;
@@ -670,7 +670,7 @@ public class DalamudContextMenu : IDisposable {
                 try {
                     custom.Action(args);
                 } catch (Exception ex) {
-                    Logger.LogError(ex, "Exception in custom context menu item");
+                    Service.Logger.Error(ex, "Exception in custom context menu item");
                 }
 
                 break;
@@ -691,7 +691,7 @@ public class DalamudContextMenu : IDisposable {
                 try {
                     custom.Action(args);
                 } catch (Exception ex) {
-                    Logger.LogError(ex, "Exception in custom context menu item");
+                    Service.Logger.Error(ex, "Exception in custom context menu item");
                 }
 
                 break;

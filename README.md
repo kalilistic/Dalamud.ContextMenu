@@ -24,7 +24,7 @@ This is a library to add context menus to dalamud plugins.
 
 ```csharp
 // create instance
-DalamudContextMenu contextMenu = new DalamudContextMenu();
+DalamudContextMenu contextMenu = new DalamudContextMenu(PluginInterface);
 
 // create context menu item
 GameObjectContextMenuItem contextMenuItem = new GameObjectContextMenuItem(

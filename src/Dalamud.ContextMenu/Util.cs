@@ -6,6 +6,7 @@
 
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
+using Dalamud.Logging;
 
 namespace Dalamud.ContextMenu;
 
@@ -43,15 +44,5 @@ internal static class Util {
     internal static SeString ReadSeString(IntPtr memory) {
         var terminated = ReadTerminated(memory);
         return SeString.Parse(terminated);
-    }
-
-    internal static void PrintMissingSig(string name) {
-        Logger.LogWarning($"Could not find signature for {name}. This functionality will be disabled.");
-    }
-
-    internal static T GetService<T>() {
-        var service = typeof(IDalamudPlugin).Assembly.GetType("Dalamud.Service`1")!.MakeGenericType(typeof(T));
-        var get = service.GetMethod("Get", BindingFlags.Public | BindingFlags.Static)!;
-        return (T) get.Invoke(null, null)!;
     }
 }

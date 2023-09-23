@@ -28,7 +28,7 @@ internal class UiAlloc {
 
     private readonly GetGameAllocatorDelegate? _getGameAllocator;
 
-    internal UiAlloc(SigScanner scanner) {
+    internal UiAlloc(ISigScanner scanner) {
         if (scanner.TryScanText(Signatures.GameAlloc, out var gameAllocPtr, "UiAlloc (GameAlloc)")) {
             this._gameAlloc = Marshal.GetDelegateForFunctionPointer<GameAllocDelegate>(gameAllocPtr);
         } else {
