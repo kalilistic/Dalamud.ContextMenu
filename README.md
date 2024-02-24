@@ -1,3 +1,5 @@
+# THIS IS DEPRECATED AND WILL NOT BE UPDATED FOR 7.0.
+
 # Dalamud.ContextMenu
 [![Nuget](https://img.shields.io/nuget/v/Dalamud.ContextMenu)](https://www.nuget.org/packages/Dalamud.ContextMenu/)
 
